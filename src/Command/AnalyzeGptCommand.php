@@ -14,7 +14,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
-    name: 'analyze-gpt',
+    name: 'app:analyze-gpt',
     description: 'Add a short description for your command',
 )]
 class AnalyzeGptCommand extends Command

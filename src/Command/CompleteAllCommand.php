@@ -15,7 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'complete-all',
+    name: 'app:complete-all',
     description: 'Add a short description for your command',
 )]
 class CompleteAllCommand extends Command

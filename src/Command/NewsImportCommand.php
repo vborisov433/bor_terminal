@@ -14,7 +14,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
-    name: 'news-import',
+    name: 'app:news-import',
     description: 'Add a short description for your command',
 )]
 class NewsImportCommand extends Command
