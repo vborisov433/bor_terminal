@@ -2,9 +2,10 @@
 # 127.0.0.1       borterminal
 
 # cat /etc/nginx/sites-available/borterminal
+# sudo ln -s /etc/nginx/sites-available/borterminal /etc/nginx/sites-enabled/
+# sudo service nginx restart
 
 server {
-
     server_name borterminal;
     root /var/www/bor_terminal/public;
 
