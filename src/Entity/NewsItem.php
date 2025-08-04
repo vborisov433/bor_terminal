@@ -38,8 +38,12 @@ class NewsItem
     #[ORM\OneToMany(mappedBy: 'newsItem', targetEntity: MarketAnalysis::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $marketAnalyses;
 
+    #[ORM\Column(type: 'datetime_immutable')]
+    private \DateTimeImmutable $createdAt;
+
     public function __construct()
     {
+        $this->createdAt = new \DateTimeImmutable();
         $this->marketAnalyses = new ArrayCollection();
     }
 
@@ -146,6 +150,11 @@ class NewsItem
     public function setCompleted(bool $completed): void
     {
         $this->completed = $completed;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 
 }
