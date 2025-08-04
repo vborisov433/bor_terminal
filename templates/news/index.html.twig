@@ -6,14 +6,24 @@
 
         <form method="get" class="row g-3 mb-4">
             <div class="col-auto">
-                <label for="surprise_min" class="form-label mb-0">Surprise Index &gt;</label>
-                <input type="number" min="0" class="form-control" id="surprise_min" name="surprise_min"
-                       value="{{ surprise_min is not null ? surprise_min : '' }}" style="width:80px;">
+                <label for="surprise_min" class="form-label mb-0">Surprise Index</label>
+                <input type="range" class="form-range" min="0" max="10" id="surprise_min"
+                       name="surprise_min"
+                       value="{{ surprise_min is not null ? surprise_min : 0 }}"
+                       oninput="$('#surprise_min_value').text(this.value)">
+                <span id="surprise_min_value" class="badge bg-primary ms-1">
+            {{ surprise_min is not null ? surprise_min : 0 }}
+        </span>
             </div>
             <div class="col-auto">
-                <label for="impact_min" class="form-label mb-0">Economy Impact &gt;</label>
-                <input type="number" min="0" class="form-control" id="impact_min" name="impact_min"
-                       value="{{ impact_min is not null ? impact_min : '' }}" style="width:80px;">
+                <label for="impact_min" class="form-label mb-0">Economy Impact</label>
+                <input type="range" class="form-range" min="0" max="10" id="impact_min"
+                       name="impact_min"
+                       value="{{ impact_min is not null ? impact_min : 0 }}"
+                       oninput="$('#impact_min_value').text(this.value)">
+                <span id="impact_min_value" class="badge bg-info ms-1">
+            {{ impact_min is not null ? impact_min : 0 }}
+        </span>
             </div>
             <div class="col-auto align-self-end">
                 <button class="btn btn-primary" type="submit">Filter</button>
