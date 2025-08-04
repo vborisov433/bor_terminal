@@ -35,6 +35,10 @@ class NewsImportCommand extends Command
         $response = $this->httpClient->request('GET', 'http://localhost:3000/api/latest-news');
         $newsArray = $response->toArray();
 
+        usort($newsArray, function($a, $b) {
+            return $b['index'] <=> $a['index']; // Descending: ... 3, 2, 1
+        });
+
         $repo = $this->em->getRepository(NewsItem::class);
 
         $inserted = 0;
@@ -54,6 +58,7 @@ class NewsImportCommand extends Command
             $this->em->persist($entity);
             $inserted++;
         }
+
         $this->em->flush();
 
         $io->success("Imported $inserted new news items.");

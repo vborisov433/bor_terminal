@@ -3,7 +3,8 @@ import puppeteer from 'puppeteer';
 export interface NewsItem {
     title: string;
     link: string;
-    date:string;
+    date: string;
+    index: number; // 1 = newest/top
 }
 
 function sleep(ms: number) {
@@ -25,7 +26,7 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
 
     await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.6.0.min.js' });
 
-    const news = await page.evaluate(() => {
+    const news: NewsItem[] = await page.evaluate(() => {
         function extractDate(link: string): string {
             const match = link.match(/\/(\d{4})\/(\d{2})\/(\d{2})\//);
             if (match) {
@@ -34,7 +35,7 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
                 return '';
             }
         }
-        const items: { title: string; link: string; date: string }[] = [];
+        const items: any[] = [];
         // @ts-ignore
         $('.LatestNews-headlineWrapper a.LatestNews-headline').each(function() {
             // @ts-ignore
@@ -44,7 +45,20 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
             const date = extractDate(link);
             items.push({ title, link, date });
         });
-        return items;
+
+        // Sort by date descending
+        items.sort((a, b) => {
+            if (a.date && b.date) {
+                return new Date(b.date).getTime() - new Date(a.date).getTime();
+            }
+            return 0;
+        });
+
+        // Add index: 1 = most recent at top
+        return items.map((item, idx) => ({
+            ...item,
+            index: idx + 1,
+        }));
     });
 
     await browser.close();
