@@ -19,10 +19,9 @@ final class GptController extends AbstractController
     #[Route('/gpt', name: 'app_gpt')]
     public function index(): JsonResponse
     {
-
         $question = <<<TEXT
         read
-        https://www.cnbc.com/2025/08/04/swiss-tensions-run-high-as-clock-ticks-on-us-tariff-deadline.html
+        https://www.cnbc.com/2025/08/04/berkshire-shares-dip-after-earnings-decline-lack-of-buybacks-disappoint-investors-.html
         
         for markets: dow , audjpy , audusd , dxy , fed interest rate
         give: market sentiment , short summary

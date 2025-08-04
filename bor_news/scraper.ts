@@ -3,6 +3,7 @@ import puppeteer from 'puppeteer';
 export interface NewsItem {
     title: string;
     link: string;
+    date:string;
 }
 
 function sleep(ms: number) {
@@ -25,14 +26,23 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
     await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.6.0.min.js' });
 
     const news = await page.evaluate(() => {
-        const items: { title: string; link: string }[] = [];
+        function extractDate(link: string): string {
+            const match = link.match(/\/(\d{4})\/(\d{2})\/(\d{2})\//);
+            if (match) {
+                return `${match[1]}-${match[2]}-${match[3]}`;
+            } else {
+                return '';
+            }
+        }
+        const items: { title: string; link: string; date: string }[] = [];
         // @ts-ignore
         $('.LatestNews-headlineWrapper a.LatestNews-headline').each(function() {
             // @ts-ignore
             const title = $(this).text().trim();
             // @ts-ignore
             const link = $(this).attr('href');
-            items.push({ title, link });
+            const date = extractDate(link);
+            items.push({ title, link, date });
         });
         return items;
     });
