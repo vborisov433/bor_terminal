@@ -1,0 +1,122 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Latest News Headlines{% endblock %}
+
+{% block body %}
+    <div class="container my-5">
+        <h1 class="mb-4">📰 Latest Market News Headlines</h1>
+
+        <ul class="list-group">
+            {% for news in newsItems %}
+                <li class="list-group-item py-3">
+                    <a href="#" class="fw-bold news-toggle d-block" data-news-id="{{ news.id }}">
+                        {{ news.title }}
+                    </a>
+                    <div class="news-details mt-3" id="news-details-{{ news.id }}" style="display:none;">
+                        <div class="card border-primary shadow">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <span>{{ news.title }}</span>
+                                <span class="badge bg-light text-dark">{{ news.date|date('Y-m-d') }}</span>
+                            </div>
+                            <div class="card-body">
+                                <p>
+                                    <a href="{{ news.link }}" target="_blank" rel="noopener" class="link-primary">
+                                        View original article
+                                    </a>
+                                </p>
+                                {% if news.articleInfo %}
+                                    <div class="mb-3">
+                                    <span class="badge rounded-pill {% if news.articleInfo.hasMarketImpact %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {{ news.articleInfo.hasMarketImpact ? 'Market Impact' : 'No Major Impact' }}
+                                    </span>
+                                        <h5 class="mt-2">{{ news.articleInfo.titleHeadline }}</h5>
+                                        <p>{{ news.articleInfo.summary }}</p>
+                                        <dl class="row">
+                                            <dt class="col-sm-4">Surprise Index</dt>
+                                            <dd class="col-sm-8">{{ news.articleInfo.newsSurpriseIndex }}</dd>
+                                            <dt class="col-sm-4">Economy Impact</dt>
+                                            <dd class="col-sm-8">{{ news.articleInfo.economyImpact }}</dd>
+                                            <dt class="col-sm-4">Macro Keyword Heatmap</dt>
+                                            <dd class="col-sm-8">
+                                               {{ dump(news.articleInfo.macroKeywordHeatmap) }}
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                {% endif %}
+                                {% if news.marketAnalyses|length > 0 %}
+                                    <h6 class="mb-2">Market Analysis:</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered align-middle">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th>Market</th>
+                                                <th>Sentiment</th>
+                                                <th>Magnitude</th>
+                                                <th>Reason</th>
+                                                <th>Keywords</th>
+                                                <th>Categories</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for market in news.marketAnalyses %}
+                                                <tr>
+                                                    <td><span class="fw-bold">{{ market.market }}</span></td>
+                                                    <td>
+                                                        <span class="badge
+                                                            {% if market.sentiment == 'Bullish' %}bg-success
+                                                            {% elseif market.sentiment == 'Bearish' %}bg-danger
+                                                            {% else %}bg-secondary{% endif %}">
+                                                            {{ market.sentiment }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ market.magnitude }}</td>
+                                                    <td style="max-width:300px">{{ market.reason }}</td>
+                                                    <td>
+                                                        {% for kw in market.keywords %}
+                                                            <span class="badge bg-warning text-dark me-1">{{ kw }}</span>
+                                                        {% endfor %}
+                                                    </td>
+                                                    <td>
+                                                        {% for cat in market.categories %}
+                                                            <span class="badge bg-info text-dark me-1">{{ cat }}</span>
+                                                        {% endfor %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer text-end small text-muted">
+                                {% if news.completed %}
+                                    <span class="text-success fw-bold">✔ Analyzed</span>
+                                {% else %}
+                                    <span class="text-warning fw-bold">Processing...</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            {% else %}
+                <li class="list-group-item">No news found.</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        $(function() {
+            $('.news-toggle').on('click', function(e){
+                e.preventDefault();
+                var id = $(this).data('news-id');
+                // Optional: close others
+                $('.news-details').not('#news-details-' + id).slideUp();
+                $('#news-details-' + id).slideToggle();
+            });
+        });
+    </script>
+{% endblock %}

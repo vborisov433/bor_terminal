@@ -21,6 +21,18 @@ class NewsArticleInfo
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $titleHeadline = null;
 
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $newsSurpriseIndex = null;
+
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $economyImpact = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $macroKeywordHeatmap = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $summary = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -101,15 +113,4 @@ class NewsArticleInfo
         $this->summary = $summary;
     }
 
-    #[ORM\Column(type: 'integer', nullable: true)]
-    private ?int $newsSurpriseIndex = null;
-
-    #[ORM\Column(type: 'integer', nullable: true)]
-    private ?int $economyImpact = null;
-
-    #[ORM\Column(type: 'json', nullable: true)]
-    private ?array $macroKeywordHeatmap = null;
-
-    #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $summary = null;
 }
