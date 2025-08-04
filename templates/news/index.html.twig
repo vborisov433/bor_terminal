@@ -11,7 +11,7 @@
                        name="surprise_min"
                        value="{{ surprise_min is not null ? surprise_min : 0 }}"
                        oninput="$('#surprise_min_value').text(this.value)">
-                <span id="surprise_min_value" class="badge bg-primary ms-1">
+                <span id="surprise_min_value" class="badge bg-primary ">
             {{ surprise_min is not null ? surprise_min : 0 }}
         </span>
             </div>
@@ -21,7 +21,7 @@
                        name="impact_min"
                        value="{{ impact_min is not null ? impact_min : 0 }}"
                        oninput="$('#impact_min_value').text(this.value)">
-                <span id="impact_min_value" class="badge bg-info ms-1">
+                <span id="impact_min_value" class="badge bg-primary  ">
             {{ impact_min is not null ? impact_min : 0 }}
         </span>
             </div>
@@ -76,8 +76,7 @@
                                             View original article
                                         </a>
 </p>
-
-                                        <p>{{ news.articleInfo.summary }}</p>
+                                        <p class="fw-semibold">{{ news.articleInfo.summary }}</p>
                                         <strong>Heatmap:&nbsp;</strong>
 {#                                        {% for word in news.articleInfo.macroKeywordHeatmap ?? [] %}#}
 {#                                            <span class="badge bg-info text-dark me-1">{{ word }}</span>#}
