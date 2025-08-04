@@ -53,7 +53,7 @@ class NewsArticleInfo
         $this->newsItem = $newsItem;
     }
 
-    public function isHasMarketImpact(): bool
+    public function hasMarketImpact(): bool
     {
         return $this->hasMarketImpact;
     }

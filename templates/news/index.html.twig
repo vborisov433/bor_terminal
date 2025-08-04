@@ -52,8 +52,9 @@
                                     {{ news.createdAt|date('Y-m-d H:i') }}
                                 </time>
                             </div>
-                            <span class="fw-bold">{{ news.title }}</span>
-
+                            <span class="{{ news.articleInfo is not defined or news.articleInfo is null or not news.articleInfo.hasMarketImpact ? 'text-muted' : 'fw-bold' }}">
+    {{ news.title }}
+</span>
                         </td>
                         <td class="text-center">
                             {% if news.articleInfo %}

@@ -109,10 +109,13 @@ for each market in format:
 }
 TEXT;
             try {
-                $response = $this->httpClient->request('POST', 'http://localhost:5000/api/ask-gpt', [
-                    'json' => ['question' => $question],
-                ]);
-                $data = $response->toArray();
+                $data = $this->requestWithRetries(function() use ($question) {
+                    $response = $this->httpClient->request('POST', 'http://localhost:5000/api/ask-gpt', [
+                        'json' => ['question' => $question],
+                        // optionally, set timeout: 'timeout' => 40
+                    ]);
+                    return $response->toArray();
+                }, 3, 2);
                 $answer = $data['answer'] ?? '';
 
                 $start = strpos($answer, '{');
@@ -192,5 +195,21 @@ TEXT;
 
         $newsItem->setCompleted(true);
         $this->em->persist($newsItem);
+    }
+
+    private function requestWithRetries(callable $fetch, int $maxAttempts = 3, float $retryDelay = 1.0)
+    {
+        $lastException = null;
+        for ($i = 1; $i <= $maxAttempts; $i++) {
+            try {
+                return $fetch();
+            } catch (\Throwable $e) {
+                $lastException = $e;
+                if ($i < $maxAttempts) {
+                    sleep($retryDelay); // or usleep for sub-second
+                }
+            }
+        }
+        throw $lastException;
     }
 }
