@@ -21,6 +21,32 @@ class NewsItem
     #[ORM\Column(type:'date_immutable')]
     private \DateTimeImmutable $date;
 
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $gptAnalysis = null;
+
+    #[ORM\Column(type: 'boolean')]
+    private bool $analyzed = false;
+
+    public function getGptAnalysis(): ?array
+    {
+        return $this->gptAnalysis;
+    }
+
+    public function setGptAnalysis(?array $gptAnalysis): void
+    {
+        $this->gptAnalysis = $gptAnalysis;
+    }
+
+    public function isAnalyzed(): bool
+    {
+        return $this->analyzed;
+    }
+
+    public function setAnalyzed(bool $analyzed): void
+    {
+        $this->analyzed = $analyzed;
+    }
+
     public function getTitle(): string
     {
         return $this->title;
@@ -49,6 +75,11 @@ class NewsItem
     public function setDate(\DateTimeImmutable $date): void
     {
         $this->date = $date;
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
     }
 
 }
