@@ -8,7 +8,7 @@
     <style>
         /* Optional minor tweaks */
         body { background: #f8f9fa; }
-        main.container { max-width: 950px; }
+
     </style>
     {% block stylesheets %}{% endblock %}
 </head>
@@ -41,10 +41,6 @@
 
     {% block body %}{% endblock %}
 </main>
-
-<footer class="text-center py-4 mt-5 text-muted small">
-    Market News AI &copy; {{ "now"|date("Y") }} &middot; Powered by Symfony & Bootstrap
-</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% block javascripts %}{% endblock %}
