@@ -21,12 +21,11 @@
             </div>
         </form>
 
-
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-primary">
                 <tr>
-                    <th style="width:115px;">Date</th>
+                    <th style="width:115px;">#</th>
                     <th>Headline</th>
                     <th style="width:120px;">Surprise Index</th>
                     <th style="width:120px;">Economy Impact</th>
@@ -35,7 +34,11 @@
                 <tbody>
                 {% for news in newsItems %}
                     <tr class="news-toggle" style="cursor:pointer" data-news-id="{{ news.id }}">
-                        <td>{{ news.date|date('Y-m-d') }}</td>
+                        <td title="{{ news.date|date('Y-m-d') }}">
+                            <time class="timeago" datetime="{{ news.createdAt|date('c') }}">
+                                {{ news.createdAt|date('Y-m-d H:i') }}
+                            </time>
+                        </td>
                         <td class="fw-bold">{{ news.title }}</td>
                         <td>
                             {% if news.articleInfo %}
@@ -129,6 +132,7 @@
 {% block javascripts %}
     {{ parent() }}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/timeago.js/4.0.2/timeago.min.js"></script>
     <script>
         $(function() {
             $('.news-toggle').on('click', function() {
@@ -137,6 +141,9 @@
                 $('.news-details-row').not('#news-details-' + id).hide();
                 $('#news-details-' + id).toggle();
             });
+
+            timeago.render(document.querySelectorAll('.timeago'));
+
         });
     </script>
 {% endblock %}
