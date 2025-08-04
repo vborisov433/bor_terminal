@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\NewsItemRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NewsItemRepository::class)]
@@ -26,6 +28,20 @@ class NewsItem
 
     #[ORM\Column(type: 'boolean')]
     private bool $analyzed = false;
+
+    #[ORM\Column(type: 'boolean')]
+    private bool $completed = false;
+
+    #[ORM\OneToOne(mappedBy: "newsItem", targetEntity: NewsArticleInfo::class, cascade: ["persist", "remove"])]
+    private ?NewsArticleInfo $articleInfo = null;
+
+    #[ORM\OneToMany(mappedBy: 'newsItem', targetEntity: MarketAnalysis::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $marketAnalyses;
+
+    public function __construct()
+    {
+        $this->marketAnalyses = new ArrayCollection();
+    }
 
     public function getGptAnalysis(): ?array
     {
@@ -80,6 +96,56 @@ class NewsItem
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getArticleInfo(): ?NewsArticleInfo
+    {
+        return $this->articleInfo;
+    }
+
+    public function setArticleInfo(?NewsArticleInfo $articleInfo): void
+    {
+        $this->articleInfo = $articleInfo;
+    }
+
+    public function getMarketAnalyses(): Collection
+    {
+        return $this->marketAnalyses;
+    }
+
+    public function setMarketAnalyses(Collection $marketAnalyses): void
+    {
+        $this->marketAnalyses = $marketAnalyses;
+    }
+
+    public function addMarketAnalysis(MarketAnalysis $marketAnalysis): self
+    {
+        if (!$this->marketAnalyses->contains($marketAnalysis)) {
+            $this->marketAnalyses[] = $marketAnalysis;
+            $marketAnalysis->setNewsItem($this);
+        }
+        return $this;
+    }
+
+    public function removeMarketAnalysis(MarketAnalysis $marketAnalysis): self
+    {
+        if ($this->marketAnalyses->removeElement($marketAnalysis)) {
+            // set the owning side to null (unless already changed)
+            if ($marketAnalysis->getNewsItem() === $this) {
+                $marketAnalysis->setNewsItem(null);
+            }
+        }
+        return $this;
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->completed;
+    }
+
+    public function setCompleted(bool $completed): void
+    {
+        $this->completed = $completed;
     }
 
 }
