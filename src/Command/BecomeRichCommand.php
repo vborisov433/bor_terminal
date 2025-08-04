@@ -115,7 +115,7 @@ TEXT;
                         // optionally, set timeout: 'timeout' => 40
                     ]);
                     return $response->toArray();
-                }, 3, 2);
+                }, 3, 3);
                 $answer = $data['answer'] ?? '';
 
                 $start = strpos($answer, '{');
