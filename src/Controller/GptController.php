@@ -19,7 +19,37 @@ final class GptController extends AbstractController
     #[Route('/gpt', name: 'app_gpt')]
     public function index(): JsonResponse
     {
-        $payload = ['question' => 'What is the stock market?'];
+
+        $question = <<<TEXT
+        read
+        https://www.cnbc.com/2025/08/04/swiss-tensions-run-high-as-clock-ticks-on-us-tariff-deadline.html
+        
+        for markets: dow , audjpy , audusd , dxy , fed interest rate
+        give: market sentiment , short summary
+        return in json
+        for each market in format:
+        
+        "markets": [
+        {
+           "magnitude": "", // from 1-10
+           "market": "",
+           "sentiment": "Bearish or Bullish or Neutral",
+           "reason": "...",
+           "keywords": [],
+           "categories": []
+        }
+        ],
+        "article_info": {
+           "has_market_impact": false or true,
+           "title_headline": "",
+           "news_surprise_index": 0,
+           "economy_impact": 0,
+           "macro_keyword_heatmap": [],
+           "summary": ""
+        }
+        TEXT;
+
+        $payload = ['question' => $question];
 
         try {
             $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt', [
@@ -28,9 +58,32 @@ final class GptController extends AbstractController
 
             $data = $response->toArray();
 
-            return $this->json([
-                'answer' => $data['answer'] ?? 'No answer returned',
-            ]);
+            $answer = $data['answer'] ?? '';
+
+            // Extract only the JSON part
+            $start = strpos($answer, '{');
+            $end = strrpos($answer, '}');
+            if ($start === false || $end === false || $end <= $start) {
+                return $this->json([
+                    'error' => 'Could not extract JSON from answer',
+                    'raw' => $answer,
+                ], 500);
+            }
+
+            $jsonString = substr($answer, $start, $end - $start + 1);
+
+            $json = json_decode($jsonString, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return $this->json([
+                    'error' => 'Extracted string is not valid JSON',
+                    'raw' => $jsonString,
+                    'answer' => $answer,
+                ], 500);
+            }
+
+            return $this->json($json);
+
         } catch (\Throwable $e) {
             return $this->json([
                 'error' => 'Failed to reach GPT server',
