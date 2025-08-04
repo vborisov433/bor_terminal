@@ -1,0 +1,196 @@
+<?php
+
+namespace App\Command;
+
+use App\Entity\MarketAnalysis;
+use App\Entity\NewsArticleInfo;
+use App\Entity\NewsItem;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+
+#[AsCommand(
+    name: 'app:become-rich',
+    description: 'Add a short description for your command',
+)]
+class BecomeRichCommand extends Command
+{
+    protected function configure(): void
+    {
+        $this
+            ->addArgument('arg1', InputArgument::OPTIONAL, 'Argument description')
+            ->addOption('option1', null, InputOption::VALUE_NONE, 'Option description')
+        ;
+    }
+
+    public function __construct(
+        private HttpClientInterface $httpClient,
+        private EntityManagerInterface $em
+    ) {
+        parent::__construct();
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $io = new SymfonyStyle($input, $output);
+
+        $repo = $this->em->getRepository(NewsItem::class);
+
+        // 1. Import Section
+        $io->section('Fetching latest news...');
+        $response = $this->httpClient->request('GET', 'http://localhost:3000/api/latest-news');
+        $newsArray = $response->toArray();
+
+        usort($newsArray, fn($a, $b) => $b['index'] <=> $a['index']);
+
+        $inserted = 0;
+        $skipped = 0;
+        $analyzed = 0;
+
+        $newItems = [];
+        foreach ($newsArray as $newsData) {
+            if ($repo->findOneBy(['link' => $newsData['link']])) {
+                $skipped++;
+                continue;
+            }
+            $entity = new NewsItem();
+            $entity->setTitle($newsData['title']);
+            $entity->setLink($newsData['link']);
+            $entity->setDate(new \DateTimeImmutable($newsData['date']));
+            $this->em->persist($entity);
+            $newItems[] = $entity;
+            $inserted++;
+        }
+        $this->em->flush();
+        $io->success("Imported $inserted new news items.");
+        $io->note("Skipped $skipped duplicate items.");
+
+        // 2. Analyze Section (only newly inserted items)
+        if (empty($newItems)) {
+            $io->success('No new news items to analyze.');
+            return self::SUCCESS;
+        }
+        $io->section('Analyzing news with GPT...');
+        $io->progressStart(count($newItems));
+
+        foreach ($newItems as $newsItem) {
+            $question = <<<TEXT
+read
+{$newsItem->getLink()}
+
+for markets: dow , audjpy , audusd , dxy , fed interest rate
+give: market sentiment , short summary
+return in json
+for each market in format:
+
+"markets": [
+{
+   "magnitude": "", // from 1-10
+   "market": "",
+   "sentiment": "Bearish or Bullish or Neutral",
+   "reason": "...",
+   "keywords": [],
+   "categories": []
+}
+],
+"article_info": {
+   "has_market_impact": false or true,
+   "title_headline": "",
+   "news_surprise_index": 0,
+   "economy_impact": 0,
+   "macro_keyword_heatmap": [],
+   "summary": ""
+}
+TEXT;
+            try {
+                $response = $this->httpClient->request('POST', 'http://localhost:5000/api/ask-gpt', [
+                    'json' => ['question' => $question],
+                ]);
+                $data = $response->toArray();
+                $answer = $data['answer'] ?? '';
+
+                $start = strpos($answer, '{');
+                $end = strrpos($answer, '}');
+                if ($start === false || $end === false || $end <= $start) {
+                    throw new \RuntimeException("Could not extract JSON from answer for link: " . $newsItem->getLink());
+                }
+                $jsonString = substr($answer, $start, $end - $start + 1);
+                $json = json_decode($jsonString, true);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new \RuntimeException('Malformed JSON for link: ' . $newsItem->getLink());
+                }
+
+                $newsItem->setGptAnalysis($json);
+                $newsItem->setAnalyzed(true);
+
+                $this->completeNewsItem($newsItem, $io);
+
+                $this->em->persist($newsItem);
+                $this->em->flush();
+
+                $io->note('Analyzed: ' . $newsItem->getTitle());
+                $analyzed++;
+            } catch (\Throwable $e) {
+                $io->error('Failed: ' . $newsItem->getTitle() . ' - ' . $e->getMessage());
+            }
+            $io->progressAdvance();
+        }
+
+        $io->progressFinish();
+        $io->success("Analyzed $analyzed new news items.");
+
+        return self::SUCCESS;
+    }
+
+    private function completeNewsItem(NewsItem $newsItem, SymfonyStyle $io): void
+    {
+        $gpt = $newsItem->getGptAnalysis();
+        if (!$gpt || !isset($gpt['markets'], $gpt['article_info'])) {
+            $io->warning('Skipping NewsItem#'.$newsItem->getId().': missing gptAnalysis');
+            $newsItem->setCompleted(true);
+            $this->em->persist($newsItem);
+            return;
+        }
+
+        $existingAnalyses = $newsItem->getMarketAnalyses() ?? [];
+        foreach ($existingAnalyses as $ma) {
+            $this->em->remove($ma);
+        }
+        foreach ($gpt['markets'] as $marketData) {
+            $ma = new MarketAnalysis();
+            $ma->setNewsItem($newsItem);
+            $ma->setMarket($marketData['market'] ?? '');
+            $ma->setSentiment($marketData['sentiment'] ?? '');
+            $ma->setMagnitude((int)($marketData['magnitude'] ?? 0));
+            $ma->setReason($marketData['reason'] ?? '');
+            $ma->setKeywords($marketData['keywords'] ?? []);
+            $ma->setCategories($marketData['categories'] ?? []);
+            $this->em->persist($ma);
+        }
+
+        $info = $gpt['article_info'];
+        $articleInfo = $newsItem->getArticleInfo() ?? new NewsArticleInfo();
+        $articleInfo->setNewsItem($newsItem);
+        $articleInfo->setHasMarketImpact((bool)($info['has_market_impact'] ?? false));
+        $articleInfo->setTitleHeadline($info['title_headline'] ?? null);
+        if (isset($info['news_surprise_index'])) {
+            $articleInfo->setNewsSurpriseIndex((int)$info['news_surprise_index']);
+        }
+        if (isset($info['economy_impact'])) {
+            $articleInfo->setEconomyImpact((int)$info['economy_impact']);
+        }
+        $articleInfo->setMacroKeywordHeatmap($info['macro_keyword_heatmap'] ?? []);
+        $articleInfo->setSummary($info['summary'] ?? null);
+        $this->em->persist($articleInfo);
+
+        $newsItem->setCompleted(true);
+        $this->em->persist($newsItem);
+    }
+}
