@@ -2,6 +2,8 @@
 
 namespace App\Command;
 
+use App\Entity\MarketAnalysis;
+use App\Entity\NewsArticleInfo;
 use App\Entity\NewsItem;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -71,7 +73,6 @@ for each market in format:
    "summary": ""
 }
 TEXT;
-
             try {
                 $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt', [
                     'json' => ['question' => $question],
@@ -94,6 +95,12 @@ TEXT;
 
                 $newsItem->setGptAnalysis($json);
                 $newsItem->setAnalyzed(true);
+
+                $this->completeNewsItem($newsItem, $io);
+
+                $this->em->persist($newsItem);
+                $this->em->flush();
+
                 $io->note('Analyzed: ' . $newsItem->getTitle());
             } catch (\Throwable $e) {
                 $io->error('Failed: ' . $newsItem->getTitle() . ' - ' . $e->getMessage());
@@ -102,10 +109,58 @@ TEXT;
             $io->progressAdvance();
         }
 
-        $this->em->flush();
-
         $io->progressFinish();
         $io->success('All news items processed.');
         return self::SUCCESS;
+    }
+
+    private function completeNewsItem(NewsItem $newsItem, SymfonyStyle $io): void
+    {
+        $gpt = $newsItem->getGptAnalysis();
+
+        if (!$gpt || !isset($gpt['markets'], $gpt['article_info'])) {
+            $io->warning('Skipping NewsItem#'.$newsItem->getId().': missing gptAnalysis');
+            $newsItem->setCompleted(true);
+            $this->em->persist($newsItem);
+            return;
+        }
+
+        // Remove old MarketAnalysis for this news item to avoid duplicates
+        $existingAnalyses = $newsItem->getMarketAnalyses() ?? [];
+        foreach ($existingAnalyses as $ma) {
+            $this->em->remove($ma);
+        }
+
+        // Create new MarketAnalysis entities
+        foreach ($gpt['markets'] as $marketData) {
+            $ma = new MarketAnalysis();
+            $ma->setNewsItem($newsItem);
+            $ma->setMarket($marketData['market'] ?? '');
+            $ma->setSentiment($marketData['sentiment'] ?? '');
+            $ma->setMagnitude((int)($marketData['magnitude'] ?? 0));
+            $ma->setReason($marketData['reason'] ?? '');
+            $ma->setKeywords($marketData['keywords'] ?? []);
+            $ma->setCategories($marketData['categories'] ?? []);
+            $this->em->persist($ma);
+        }
+
+        // NewsArticleInfo: create or update
+        $info = $gpt['article_info'];
+        $articleInfo = $newsItem->getArticleInfo() ?? new NewsArticleInfo();
+        $articleInfo->setNewsItem($newsItem);
+        $articleInfo->setHasMarketImpact((bool)($info['has_market_impact'] ?? false));
+        $articleInfo->setTitleHeadline($info['title_headline'] ?? null);
+        if (isset($info['news_surprise_index'])) {
+            $articleInfo->setNewsSurpriseIndex((int)$info['news_surprise_index']);
+        }
+        if (isset($info['economy_impact'])) {
+            $articleInfo->setEconomyImpact((int)$info['economy_impact']);
+        }
+        $articleInfo->setMacroKeywordHeatmap($info['macro_keyword_heatmap'] ?? []);
+        $articleInfo->setSummary($info['summary'] ?? null);
+        $this->em->persist($articleInfo);
+
+        $newsItem->setCompleted(true);
+        $this->em->persist($newsItem);
     }
 }
