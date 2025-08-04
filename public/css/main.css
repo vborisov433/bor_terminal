@@ -1,0 +1,26 @@
+.dot {
+    width: 9px;
+    height: 9px;
+    background-color: #fcb700;
+    border-radius: 50%;
+    display: inline-block;
+}
+th{
+    font-size: 12px;
+}
+.icon1{
+    font-size: 25px;
+    margin-left: 5px;
+    display: flex;
+}
+.timeago{
+    letter-spacing: 1.2px;
+    color: #747474;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.magnitude{
+    font-size: 18px;
+    font-weight: 700;
+}

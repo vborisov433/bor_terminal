@@ -35,29 +35,34 @@
             <table class="table table-hover align-middle">
                 <thead class="table-primary">
                 <tr>
-                    <th style="width:115px;">#</th>
+                    <th></th>
                     <th>Headline</th>
-                    <th style="width:120px;">Surprise Index</th>
-                    <th style="width:120px;">Economy Impact</th>
+                    <th class="text-center">Surprise<i class="icon1 bi bi-list-ol" aria-hidden="true"></i>
+                    </th>
+                    <th class="text-center">Economy <i class="icon1 bi bi-list-ol" aria-hidden="true"></i></th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for news in newsItems %}
                     <tr class="news-toggle" style="cursor:pointer" data-news-id="{{ news.id }}">
-                        <td title="{{ news.date|date('Y-m-d') }}">
-                            <time class="timeago" datetime="{{ news.createdAt|date('c') }}">
-                                {{ news.createdAt|date('Y-m-d H:i') }}
-                            </time>
-                        </td>
-                        <td class="fw-bold">{{ news.title }}</td>
+                        <td><span class="dot"></span></td>
                         <td>
+                            <div title="{{ news.date|date('Y-m-d') }}">
+                                <time class="timeago" datetime="{{ news.createdAt|date('c') }}">
+                                    {{ news.createdAt|date('Y-m-d H:i') }}
+                                </time>
+                            </div>
+                            <span class="fw-bold">{{ news.title }}</span>
+
+                        </td>
+                        <td class="text-center">
                             {% if news.articleInfo %}
                                 {{ news.articleInfo.newsSurpriseIndex ?? '-' }}
                             {% else %}
                                 -
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="text-center">
                             {% if news.articleInfo %}
                                 {{ news.articleInfo.economyImpact ?? '-' }}
                             {% else %}
@@ -65,22 +70,24 @@
                             {% endif %}
                         </td>
                     </tr>
-                    <tr class="news-details-row" id="news-details-{{ news.id }}" style="display:none; background: #f8f9fa;">
+                    <tr class="news-details-row" id="news-details-{{ news.id }}"
+                        style="display:none; background: #f8f9fa;">
                         <td colspan="4">
                             <div>
                                 {# Article Info #}
                                 {% if news.articleInfo %}
                                     <div class="mb-2">
-<p>
-                                        <a href="{{ news.link }}" target="_blank" rel="noopener" class="link-primary">
-                                            View original article
-                                        </a>
-</p>
+                                        <p>
+                                            <a href="{{ news.link }}" target="_blank" rel="noopener"
+                                               class="link-primary">
+                                                View original article
+                                            </a>
+                                        </p>
                                         <p class="fw-semibold">{{ news.articleInfo.summary }}</p>
                                         <strong>Heatmap:&nbsp;</strong>
-{#                                        {% for word in news.articleInfo.macroKeywordHeatmap ?? [] %}#}
-{#                                            <span class="badge bg-info text-dark me-1">{{ word }}</span>#}
-{#                                        {% endfor %}#}
+                                        {#                                        {% for word in news.articleInfo.macroKeywordHeatmap ?? [] %} #}
+                                        {#                                            <span class="badge bg-info text-dark me-1">{{ word }}</span> #}
+                                        {#                                        {% endfor %} #}
                                     </div>
                                 {% endif %}
 
@@ -90,16 +97,14 @@
                                         <table class="table table-sm table-bordered mt-3" style="width:100%;">
                                             <thead class="table-light">
                                             <tr>
-                                                <th style="width:8%;">Market</th>
-                                                <th style="width:8%;">Sentiment</th>
-                                                <th style="width:6%;">Magnitude</th>
-                                                <th style="width:78%; min-width:300px;">Reason</th>
+                                                <th>Market</th>
+                                                <th>Sentiment</th>
                                             </tr>
                                             </thead>
                                             <tbody>
                                             {% for market in news.marketAnalyses %}
                                                 <tr>
-                                                    <td><span class="fw-bold">{{ market.market }}</span></td>
+                                                    <td rowspan="2" class="align-middle text-uppercase"><span class="fw-bold">{{ market.market }}</span></td>
                                                     <td>
                                                     <span class="badge
                                                         {% if market.sentiment == 'Bullish' %}bg-success
@@ -107,19 +112,22 @@
                                                         {% else %}bg-secondary{% endif %}">
                                                         {{ market.sentiment }}
                                                     </span>
+                                                        | Magnitude: <i class="bi bi-graph-up"></i>  <span class="magnitude"> {{ market.magnitude }}</span>
                                                     </td>
-                                                    <td>{{ market.magnitude }}</td>
-                                                    <td style="max-width:300px">{{ market.reason }}</td>
-{#                                                    <td>#}
-{#                                                        {% for kw in market.keywords %}#}
-{#                                                            <span class="badge bg-warning text-dark me-1">{{ kw }}</span>#}
-{#                                                        {% endfor %}#}
-{#                                                    </td>#}
-{#                                                    <td>#}
-{#                                                        {% for cat in market.categories %}#}
-{#                                                            <span class="badge bg-info text-dark me-1">{{ cat }}</span>#}
-{#                                                        {% endfor %}#}
-{#                                                    </td>#}
+
+                                                    {#                                                    <td> #}
+                                                    {#                                                        {% for kw in market.keywords %} #}
+                                                    {#                                                            <span class="badge bg-warning text-dark me-1">{{ kw }}</span> #}
+                                                    {#                                                        {% endfor %} #}
+                                                    {#                                                    </td> #}
+                                                    {#                                                    <td> #}
+                                                    {#                                                        {% for cat in market.categories %} #}
+                                                    {#                                                            <span class="badge bg-info text-dark me-1">{{ cat }}</span> #}
+                                                    {#                                                        {% endfor %} #}
+                                                    {#                                                    </td> #}
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">{{ market.reason }}</td>
                                                 </tr>
                                             {% endfor %}
                                             </tbody>
@@ -130,7 +138,9 @@
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="4" class="text-center">No news found.</td></tr>
+                    <tr>
+                        <td colspan="4" class="text-center">No news found.</td>
+                    </tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -143,8 +153,8 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/timeago.js/4.0.2/timeago.min.js"></script>
     <script>
-        $(function() {
-            $('.news-toggle').on('click', function() {
+        $(function () {
+            $('.news-toggle').on('click', function () {
                 var id = $(this).data('news-id');
                 // Optionally: close others
                 $('.news-details-row').not('#news-details-' + id).hide();
