@@ -213,7 +213,14 @@
                 });
             });
 
-
+            $('.pagination .page-link').each(function () {
+                const text = $(this).text().trim();
+                if (text.includes('Previous')) {
+                    $(this).html('«');
+                } else if (text.includes('Next')) {
+                    $(this).html('»');
+                }
+            });
         });
     </script>
 {% endblock %}
