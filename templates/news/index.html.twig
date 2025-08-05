@@ -87,7 +87,7 @@
                                                 <i class="bi bi-box-arrow-up-right me-1"></i> View original article
                                             </a>
                                         </p>
-                                        <p class="summary fw-semibold">{{ news.articleInfo.summary }}</p>
+                                        <p class="summary">{{ news.articleInfo.summary }}</p>
                                         <strong>Heatmap:&nbsp;</strong>
                                         {#                                        {% for word in news.articleInfo.macroKeywordHeatmap ?? [] %} #}
                                         {#                                            <span class="badge bg-info text-dark me-1">{{ word }}</span> #}
@@ -101,23 +101,37 @@
                                         <table class="table table-sm table-bordered mt-3" style="width:100%;">
                                             <thead class="table-light">
                                             <tr>
-                                                <th>Market</th>
+                                                <th style="width: 155px;">Market</th>
                                                 <th>Sentiment</th>
                                             </tr>
                                             </thead>
                                             <tbody>
                                             {% for market in news.marketAnalyses %}
                                                 <tr>
-                                                    <td rowspan="2" class="summary align-middle text-uppercase"><span class="fw-bold">{{ market.market }}</span></td>
-                                                    <td>
-                                                    <span class="badge
-                                                        {% if market.sentiment == 'Bullish' %}bg-success
-                                                        {% elseif market.sentiment == 'Bearish' %}bg-danger
-                                                        {% else %}bg-secondary{% endif %}">
-                                                        {{ market.sentiment }}
-                                                    </span>
-                                                        | Magnitude: <i class="bi bi-graph-up"></i>  <span class="magnitude"> {{ market.magnitude }}</span>
+                                                    <td rowspan="2" class="summary align-middle text-uppercase">
+                                                        <div class="">
+                                                            {% if market.magnitude > 4 %}
+                                                                <span class="magnitude-span" title="Magnitude">
+                                                                <i class="bi bi-graph-up"></i>
+                                                                <span> {{ market.magnitude }}</span>
+                                                            </span>
+                                                                <br/>
+                                                            {% endif %}
+
+                                                            <span class="market-label">{{ market.market }}</span>
+
+                                                            {% if market.sentiment != 'Neutral' %}
+                                                                <span class="sentiment badge me-2
+                                                                    {% if market.sentiment == 'Bullish' %}bg-success
+                                                                    {% elseif market.sentiment == 'Bearish' %}bg-danger
+                                                                    {% else %}bg-secondary{% endif %}">
+                                                                    {{ market.sentiment }}
+                                                                    </span>
+                                                            {% endif %}
+
+                                                        </div>
                                                     </td>
+
 
                                                     {#                                                    <td> #}
                                                     {#                                                        {% for kw in market.keywords %} #}
@@ -131,7 +145,7 @@
                                                     {#                                                    </td> #}
                                                 </tr>
                                                 <tr>
-                                                    <td class="summary" colspan="2">{{ market.reason }}</td>
+                                                    <td class="market-reason" colspan="2">{{ market.reason }}</td>
                                                 </tr>
                                             {% endfor %}
                                             </tbody>
@@ -180,8 +194,8 @@
                 $.ajax({
                     url: "{{ path('app_news_refresh') }}",
                     type: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    success: function(response) {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                    success: function (response) {
                         setTimeout(() => {
                             location.reload(); // reload after success
                         }, 2000);

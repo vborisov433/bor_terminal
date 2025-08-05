@@ -23,10 +23,6 @@ th{
     font-weight: 700;
     text-transform: uppercase;
 }
-.magnitude{
-    font-size: 18px;
-    font-weight: 700;
-}
 .headline{
     font-size: 15px;
 }
@@ -35,4 +31,18 @@ th{
 }
 .orig-article-link{
     font-size: 13px;
+}
+.market-reason{
+    font-size: 12px;
+    font-weight: bold;
+}
+.magnitude-span{
+    width: 30px;
+}
+.sentiment{
+    float: right;
+}
+.market-label{
+    font-size: 12px;
+    font-weight: bold;
 }
