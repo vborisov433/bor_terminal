@@ -172,8 +172,10 @@
 
 {% block javascripts %}
     {{ parent() }}
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/timeago.js/4.0.2/timeago.min.js"></script>
+{#    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>#}
+    <script src="/dist/js/jquery-3.7.1.min.js"></script>
+{#    <script src="https://cdnjs.cloudflare.com/ajax/libs/timeago.js/4.0.2/timeago.min.js"></script>#}
+    <script src="/dist/js/timeago4.0.2.min.js"></script>
     <script>
         $(function () {
             $('.news-toggle').on('click', function () {
