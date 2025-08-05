@@ -36,6 +36,40 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
             }
         }
         const items: any[] = [];
+
+        // FeaturedCard main headline
+        // @ts-ignore
+        $('.FeaturedCard-packagedCardTitle a').each(function () {
+            // @ts-ignore
+            const title = $(this).text().trim();
+            // @ts-ignore
+            const link = $(this).attr('href');
+            const date = extractDate(link);
+            items.push({ title, link, date });
+        });
+
+        // PackageItem headlines under FeaturedCard
+        // @ts-ignore
+        $('.PackageItem-link').each(function () {
+            // @ts-ignore
+            const title = $(this).text().trim();
+            // @ts-ignore
+            const link = $(this).attr('href');
+            const date = extractDate(link);
+            items.push({ title, link, date });
+        });
+
+        // SecondaryCard headlines
+        // @ts-ignore
+        $('.SecondaryCard-headline a').each(function () {
+            // @ts-ignore
+            const title = $(this).text().trim();
+            // @ts-ignore
+            const link = $(this).attr('href');
+            const date = extractDate(link);
+            items.push({ title, link, date });
+        });
+
         // @ts-ignore
         $('.LatestNews-headlineWrapper a.LatestNews-headline').each(function() {
             // @ts-ignore
