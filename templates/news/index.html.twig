@@ -52,7 +52,7 @@
                                     {{ news.createdAt|date('Y-m-d H:i') }}
                                 </time>
                             </div>
-                            <span class="{{ news.articleInfo is not defined or news.articleInfo is null or not news.articleInfo.hasMarketImpact ? 'text-muted' : 'fw-bold' }}">
+                            <span class="headline {{ news.articleInfo is not defined or news.articleInfo is null or not news.articleInfo.hasMarketImpact ? 'text-muted' : 'fw-bold' }}">
     {{ news.title }}
 </span>
                         </td>
@@ -80,11 +80,11 @@
                                     <div class="mb-2">
                                         <p>
                                             <a href="{{ news.link }}" target="_blank" rel="noopener"
-                                               class="link-primary">
-                                                View original article
+                                               class="link-primary d-inline-flex align-items-center orig-article-link">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i> View original article
                                             </a>
                                         </p>
-                                        <p class="fw-semibold">{{ news.articleInfo.summary }}</p>
+                                        <p class="summary fw-semibold">{{ news.articleInfo.summary }}</p>
                                         <strong>Heatmap:&nbsp;</strong>
                                         {#                                        {% for word in news.articleInfo.macroKeywordHeatmap ?? [] %} #}
                                         {#                                            <span class="badge bg-info text-dark me-1">{{ word }}</span> #}
@@ -105,7 +105,7 @@
                                             <tbody>
                                             {% for market in news.marketAnalyses %}
                                                 <tr>
-                                                    <td rowspan="2" class="align-middle text-uppercase"><span class="fw-bold">{{ market.market }}</span></td>
+                                                    <td rowspan="2" class="summary align-middle text-uppercase"><span class="fw-bold">{{ market.market }}</span></td>
                                                     <td>
                                                     <span class="badge
                                                         {% if market.sentiment == 'Bullish' %}bg-success
@@ -128,7 +128,7 @@
                                                     {#                                                    </td> #}
                                                 </tr>
                                                 <tr>
-                                                    <td colspan="2">{{ market.reason }}</td>
+                                                    <td class="summary" colspan="2">{{ market.reason }}</td>
                                                 </tr>
                                             {% endfor %}
                                             </tbody>

@@ -24,3 +24,12 @@ th{
     font-size: 18px;
     font-weight: 700;
 }
+.headline{
+    font-size: 15px;
+}
+.summary{
+    font-size: 15px;
+}
+.orig-article-link{
+    font-size: 13px;
+}
