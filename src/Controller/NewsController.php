@@ -29,11 +29,11 @@ final class NewsController extends AbstractController
             ->orderBy('n.id', 'DESC');
 
         if (is_numeric($surpriseMin)) {
-            $qb->andWhere('a.newsSurpriseIndex > :surprise_min')
+            $qb->andWhere('a.newsSurpriseIndex >= :surprise_min')
                 ->setParameter('surprise_min', (int)$surpriseMin);
         }
         if (is_numeric($impactMin)) {
-            $qb->andWhere('a.economyImpact > :impact_min')
+            $qb->andWhere('a.economyImpact >= :impact_min')
                 ->setParameter('impact_min', (int)$impactMin);
         }
 
