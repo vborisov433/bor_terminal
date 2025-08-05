@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Repository\NewsItemRepository;
+use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Console\Input\ArgvInput;
@@ -18,10 +19,11 @@ use Symfony\Component\Routing\Attribute\Route;
 final class NewsController extends AbstractController
 {
     #[Route('/', name: 'app_news')]
-    public function index(Request $request, NewsItemRepository $repo): Response
+    public function index(Request $request, NewsItemRepository $repo, PaginatorInterface $paginator): Response
     {
         $surpriseMin = $request->query->get('surprise_min');
         $impactMin = $request->query->get('impact_min');
+        $page = max(1, (int)$request->query->get('page', 1)); // current page number
 
         $qb = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
@@ -37,14 +39,19 @@ final class NewsController extends AbstractController
                 ->setParameter('impact_min', (int)$impactMin);
         }
 
-        $newsItems = $qb->getQuery()->getResult();
+        $pagination = $paginator->paginate(
+            $qb, // query NOT ->getQuery()
+            $page,
+            12 // items per page
+        );
 
         return $this->render('news/index.html.twig', [
-            'newsItems' => $newsItems,
+            'pagination' => $pagination,
             'surprise_min' => $surpriseMin,
             'impact_min' => $impactMin,
         ]);
     }
+
 
     #[Route('/news/refresh', name: 'app_news_refresh', methods: ['POST'])]
     public function refresh(KernelInterface $kernel, Request $request): JsonResponse

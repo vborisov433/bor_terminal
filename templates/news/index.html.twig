@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Latest News Headlines{% endblock %}
+{% block title %}BOR TERMINAL{% endblock %}
 {% block body %}
     <div class="container my-5">
 
@@ -46,7 +46,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                {% for news in newsItems %}
+                {% for news in pagination %}
                     <tr class="news-toggle" style="cursor:pointer" data-news-id="{{ news.id }}">
                         <td><span class="dot"></span></td>
                         <td>
@@ -162,6 +162,9 @@
                 {% endfor %}
                 </tbody>
             </table>
+
+            {{ knp_pagination_render(pagination, '@KnpPaginator/Pagination/bootstrap_v5_pagination.html.twig') }}
+
         </div>
     </div>
 {% endblock %}
