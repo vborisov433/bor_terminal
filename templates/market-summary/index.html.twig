@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}BOR TERMINAL{% endblock %}
+{% block body %}
+    <div class="container my-4">
+        {% if market_summary_html %}
+            {{ market_summary_html|raw }}
+        {% else %}
+            <div class="alert alert-warning">
+                Market summary is currently unavailable.
+            </div>
+            {{ dump(market_summary_html) }}
+        {% endif %}
+    </div>
+{% endblock %}

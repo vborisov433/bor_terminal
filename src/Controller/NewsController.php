@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class NewsController extends AbstractController
 {
@@ -67,4 +68,103 @@ final class NewsController extends AbstractController
             'output' => $output->fetch(),
         ]);
     }
+
+    public function get_all_news(NewsItemRepository $repo): JsonResponse
+    {
+        // Fetch all NewsItem entities and join related data
+        $newsItems = $repo->createQueryBuilder('n')
+            ->leftJoin('n.articleInfo', 'a')->addSelect('a')
+            ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
+            ->orderBy('n.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        $data = array_map(function($item) {
+            /** @var \App\Entity\NewsItem $item */
+            return [
+                'id' => $item->getId(),
+                'title' => $item->getTitle(),
+                'link' => $item->getLink(),
+                'date' => $item->getDate()?->format('Y-m-d'),
+                'gptAnalysis' => $item->getGptAnalysis(),
+                'analyzed' => $item->isAnalyzed(),
+                'completed' => $item->isCompleted(),
+                'createdAt' => $item->getCreatedAt()?->format('Y-m-d H:i:s'),
+                'articleInfo' => $item->getArticleInfo() ? [
+                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
+                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
+                    'newsSurpriseIndex' => $item->getArticleInfo()->getNewsSurpriseIndex(),
+                    'economyImpact' => $item->getArticleInfo()->getEconomyImpact(),
+                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
+                    'summary' => $item->getArticleInfo()->getSummary(),
+                ] : null,
+                'marketAnalyses' => array_map(function($ma) {
+                    return [
+                        'market' => $ma->getMarket(),
+                        'sentiment' => $ma->getSentiment(),
+                        'magnitude' => $ma->getMagnitude(),
+                        'reason' => $ma->getReason(),
+                        'keywords' => $ma->getKeywords(),
+                        'categories' => $ma->getCategories(),
+                    ];
+                }, $item->getMarketAnalyses()->toArray()),
+            ];
+        }, $newsItems);
+
+        return new JsonResponse($data);
+    }
+
+    #[Route('/market-summary', name: 'api_news_market_summary', methods: ['GET'])]
+    public function marketSummary(NewsItemRepository $repo, HttpClientInterface $http)
+    {
+        $question = [
+            'question' => $this->get_all_news($repo). ' Give summary for different markets in short way, style in bootstrap 5 and html, return in json format `html_result`' ,
+        ];
+
+        try {
+            $response = $http->request(
+                'POST',
+                'http://localhost:5000/api/ask-gpt',
+                [ 'json' => $question ]
+            );
+
+            $data = $response->toArray(); //make data is array to string
+            $summaryJson = $data['answer'] ?? '';
+
+            if (preg_match('/```json(.*?)```/s', $summaryJson, $matches)) {
+                $jsonRaw = trim($matches[1]);
+
+                // Remove optional triple quotes if present
+                $jsonRaw = trim($jsonRaw, "\"\"\r\n");
+
+                // Replace JavaScript-style template literals (backticks) with normal quotes
+                $jsonRaw = preg_replace('/`([^`]*)`/s', '"$1"', $jsonRaw);
+
+                // Now decode JSON
+                $data = json_decode($jsonRaw, true);
+
+//                dd($data);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    dd('JSON Error: ' . json_last_error_msg());
+                }
+
+            }
+
+            return $this->render('/market-summary/index.html.twig', [
+                'market_summary_html' => $data['html_result'] ?? null,
+            ]);
+
+
+        } catch (\Throwable $e) {
+            return new JsonResponse([
+                'error' => 'Error talking to GPT service',
+                'details' => $e->getMessage(), // maybe hide in prod
+            ], 500);
+        }
+    }
+
+
+     //templates/market-summary/index.html.twig
+
 }
