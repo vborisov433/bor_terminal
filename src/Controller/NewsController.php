@@ -160,7 +160,7 @@ final class NewsController extends AbstractController
                 ' given the information show summary for different markets in short way, 
                 add bullets top news points that move markets, 
                 use headers: Market,Direction,Quick Summary,Top News Movers,
-                make it mobile friendly
+                mobile responsive and use card
                 style in bootstrap 5 html, return in json format `html_result`',
         ];
 
@@ -183,8 +183,8 @@ final class NewsController extends AbstractController
                     $summary->setHtmlResult($html);
                     $summary->setCreatedAt(new \DateTimeImmutable());
 
-                    $elapsed = microtime(true) - $start;
-                    $summary->setTimeLoaded((int) round($elapsed));
+                    $timeLoaded = (int) round(microtime(true) - $start);
+                    $summary->setTimeLoaded($timeLoaded);
 
                     $em->persist($summary);
                     $em->flush();

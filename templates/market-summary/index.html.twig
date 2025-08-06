@@ -7,13 +7,14 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="mb-0">Market Summary</h2>
 
-            <div>
+            <div class="text-end">
                 <span id="elapsed-time" class="text-muted me-3 small"></span>
                 <button id="refresh-summary" class="btn btn-outline-primary">
                     <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="summary-spinner"></span>
                     Refresh
                 </button>
             </div>
+
         </div>
 
         <div class="mb-3">
@@ -88,7 +89,7 @@
                     .removeClass('d-none')
                     .addClass('alert-warning');
                 $('#no-summary-label').show();
-            }, 120000); // 60 seconds
+            }, 190000); // 60 seconds
 
             $.ajax({
                 url: '{{ path("api_market_summary_json") }}',
