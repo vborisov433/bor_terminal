@@ -182,14 +182,13 @@ final class NewsController extends AbstractController
                     $summary = new MarketSummary();
                     $summary->setHtmlResult($html);
                     $summary->setCreatedAt(new \DateTimeImmutable());
-
                     $timeLoaded = (int) round(microtime(true) - $start);
                     $summary->setTimeLoaded($timeLoaded);
-
                     $em->persist($summary);
                     $em->flush();
-
                     break;
+                }else{
+                    dd($html);
                 }
 
             } catch (\Throwable $e) {

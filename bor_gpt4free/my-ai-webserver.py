@@ -97,9 +97,9 @@ def api_ask_gpt():
             answer = future.result(timeout=120)
             return jsonify({"answer": answer})
         except concurrent.futures.TimeoutError:
-            return jsonify({"error": "Request timed out. Try again later."}), 504
+            return jsonify({"answer": "Request timed out. Try again later."}), 504
         except Exception as e:
-            return jsonify({"error": f"Internal error: {str(e)}"}), 500
+            return jsonify({"answer": f"Internal error: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
