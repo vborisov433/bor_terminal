@@ -117,46 +117,10 @@ final class NewsController extends AbstractController
     #[Route('/market-summary', name: 'api_news_market_summary', methods: ['GET'])]
     public function marketSummary(NewsItemRepository $repo, HttpClientInterface $http)
     {
-
         return $this->render('/market-summary/index.html.twig', [
             'market_summary_html' => null,
         ]);
 
-//        $question = [
-//            'question' => $this->get_all_news($repo). ' given the information show summary for different markets in short way, add bullets top news points that move markets, style in bootstrap 5 table and html, return in json format `html_result`' ,
-//        ];
-//
-//        try {
-//            $response = $http->request(
-//                'POST',
-//                'http://localhost:5000/api/ask-gpt',
-//                [ 'json' => $question ]
-//            );
-//
-//            $data = $response->toArray(); //make data is array to string
-//            $summaryJson = $data['answer'] ?? '';
-//
-//            if (preg_match('/```json(.*?)```/s', $summaryJson, $matches)) {
-//                $jsonRaw = trim($matches[1]);
-//                $jsonRaw = trim($jsonRaw, "\"\"\r\n");
-//                $jsonRaw = preg_replace('/`([^`]*)`/s', '"$1"', $jsonRaw);
-//                $data = json_decode($jsonRaw, true);
-//
-//                if (json_last_error() !== JSON_ERROR_NONE) {
-//                    dd('JSON Error: ' . json_last_error_msg());
-//                }
-//            }
-//
-//            return $this->render('/market-summary/index.html.twig', [
-//                'market_summary_html' => null,
-//            ]);
-//
-//        } catch (\Throwable $e) {
-//            return new JsonResponse([
-//                'error' => 'Error talking to GPT service',
-//                'details' => $e->getMessage(), // maybe hide in prod
-//            ], 500);
-//        }
     }
 
     #[Route('/api/market-summary', name: 'api_market_summary_json', methods: ['GET'])]
