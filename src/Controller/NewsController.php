@@ -118,7 +118,7 @@ final class NewsController extends AbstractController
     public function marketSummary(NewsItemRepository $repo, HttpClientInterface $http)
     {
         $question = [
-            'question' => $this->get_all_news($repo). ' Give summary for different markets in short way, style in bootstrap 5 and html, return in json format `html_result`' ,
+            'question' => $this->get_all_news($repo). ' given the information show summary for different markets in short way, add bullets top news points that move markets, style in bootstrap 5 table and html, return in json format `html_result`' ,
         ];
 
         try {
@@ -133,28 +133,18 @@ final class NewsController extends AbstractController
 
             if (preg_match('/```json(.*?)```/s', $summaryJson, $matches)) {
                 $jsonRaw = trim($matches[1]);
-
-                // Remove optional triple quotes if present
                 $jsonRaw = trim($jsonRaw, "\"\"\r\n");
-
-                // Replace JavaScript-style template literals (backticks) with normal quotes
                 $jsonRaw = preg_replace('/`([^`]*)`/s', '"$1"', $jsonRaw);
-
-                // Now decode JSON
                 $data = json_decode($jsonRaw, true);
-
-//                dd($data);
 
                 if (json_last_error() !== JSON_ERROR_NONE) {
                     dd('JSON Error: ' . json_last_error_msg());
                 }
-
             }
 
             return $this->render('/market-summary/index.html.twig', [
                 'market_summary_html' => $data['html_result'] ?? null,
             ]);
-
 
         } catch (\Throwable $e) {
             return new JsonResponse([
@@ -163,8 +153,4 @@ final class NewsController extends AbstractController
             ], 500);
         }
     }
-
-
-     //templates/market-summary/index.html.twig
-
 }
