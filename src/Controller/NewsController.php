@@ -72,12 +72,13 @@ final class NewsController extends AbstractController
         ]);
     }
 
-    public function get_all_news(NewsItemRepository $repo): JsonResponse
+    public function get_all_news(NewsItemRepository $repo)
     {
         // Fetch all NewsItem entities and join related data
         $newsItems = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
             ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
+            ->andWhere('a.newsSurpriseIndex > 4')
             ->orderBy('n.id', 'DESC')
             ->getQuery()
             ->getResult();
@@ -114,7 +115,7 @@ final class NewsController extends AbstractController
             ];
         }, $newsItems);
 
-        return new JsonResponse($data);
+        return $data;
     }
     #[Route('/market-summary', name: 'api_news_market_summary', methods: ['GET'])]
     public function marketSummary(
@@ -149,8 +150,15 @@ final class NewsController extends AbstractController
         HttpClientInterface $http,
         EntityManagerInterface $em
     ): JsonResponse {
+
+//        dd($this->get_all_news($repo)); //debug
+
         $question = [
-            'question' => $this->get_all_news($repo) . ' given the information show summary for different markets in short way, add bullets top news points that move markets, style in bootstrap 5 table and html, return in json format `html_result`',
+            'question' => json_encode($this->get_all_news($repo)) .
+                ' given the information show summary for different markets in short way, 
+                add bullets top news points that move markets, 
+                use table th: Market,Sentiment,Magnitude (0-10),Summary Impact,
+                style in bootstrap 5 table and html, return in json format `html_result`',
         ];
 
         $maxRetries = 5;
