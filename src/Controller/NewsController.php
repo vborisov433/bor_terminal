@@ -188,7 +188,7 @@ final class NewsController extends AbstractController
                     $em->flush();
                     break;
                 }else{
-                    dd($html);
+                    dd($apiResponse);
                 }
 
             } catch (\Throwable $e) {
