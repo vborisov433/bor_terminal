@@ -175,20 +175,28 @@ final class NewsController extends AbstractController
                 ]);
 
                 $apiResponse = $response->toArray();
-                $decodedAnswer = json_decode($apiResponse['answer'] ?? '', true);
-                $html = $decodedAnswer['html_result'] ?? null;
+                $apiAnswer = $apiResponse['answer'] ?? null;
 
-                if ($html) {
-                    $summary = new MarketSummary();
-                    $summary->setHtmlResult($html);
-                    $summary->setCreatedAt(new \DateTimeImmutable());
-                    $timeLoaded = (int) round(microtime(true) - $start);
-                    $summary->setTimeLoaded($timeLoaded);
-                    $em->persist($summary);
-                    $em->flush();
-                    break;
-                }else{
-                    dump('$html is null');
+                if ($apiAnswer) {
+                    $jsonString = str_replace('`', '"', $apiAnswer);
+
+                    $decodedAnswer = json_decode($jsonString, true);
+                    $html = $decodedAnswer['html_result'] ?? null;
+
+                    if ($html) {
+                        $summary = new MarketSummary();
+                        $summary->setHtmlResult($html);
+                        $summary->setCreatedAt(new \DateTimeImmutable());
+                        $timeLoaded = (int) round(microtime(true) - $start);
+                        $summary->setTimeLoaded($timeLoaded);
+                        $em->persist($summary);
+                        $em->flush();
+                    } else {
+                        dump('$html still null after cleaning backticks');
+                        dd($jsonString);
+                    }
+                } else {
+                    dump('$apiAnswer is null');
                     dd($apiResponse);
                 }
 
