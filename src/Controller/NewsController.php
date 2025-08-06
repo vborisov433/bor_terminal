@@ -160,7 +160,7 @@ final class NewsController extends AbstractController
                 ' given the information show summary for different markets in short way, 
                 add bullets top news points that move markets, 
                 use headers: Market,Direction,Quick Summary,Top News Movers,
-                mobile responsive and use card
+                make small responsive table for summary and most info use card
                 style in bootstrap 5, return string with html only',
         ];
 
