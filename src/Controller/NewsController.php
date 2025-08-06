@@ -161,7 +161,7 @@ final class NewsController extends AbstractController
                 add bullets top news points that move markets, 
                 use headers: Market,Direction,Quick Summary,Top News Movers,
                 mobile responsive and use card
-                style in bootstrap 5 html, return in json format `html_result`',
+                style in bootstrap 5, return string with html only',
         ];
 
         $maxRetries = 5;
@@ -174,41 +174,47 @@ final class NewsController extends AbstractController
                     'json' => $question
                 ]);
 
-                $apiResponse = $response->toArray();
-                $apiAnswer = $apiResponse['answer'] ?? null;
-
-                if ($apiAnswer) {
-                    $jsonString = str_replace('`', '"', $apiAnswer);
-
-                    $decodedAnswer = json_decode($jsonString, true);
-                    $html = $decodedAnswer['html_result'] ?? null;
-
-                    if ($html) {
-                        $summary = new MarketSummary();
-                        $summary->setHtmlResult($html);
-                        $summary->setCreatedAt(new \DateTimeImmutable());
-                        $timeLoaded = (int) round(microtime(true) - $start);
-                        $summary->setTimeLoaded($timeLoaded);
-                        $em->persist($summary);
-                        $em->flush();
-                    } else {
-                        dump('$html still null after cleaning backticks');
-                        dd($jsonString);
-                    }
-                } else {
-                    dump('$apiAnswer is null');
-                    dd($apiResponse);
+                if ($response->getStatusCode() >= 300) {
+                    throw new \Exception('API returned a non-successful status code: ' . $response->getStatusCode());
                 }
+
+                $apiResponse = $response->toArray();
+                $html = $apiResponse['answer'] ?? null;
+
+                $startPos = strpos($html, '<');
+                $endPos = strrpos($html, '>');
+
+                if ($startPos !== false && $endPos !== false && $endPos > $startPos) {
+                    $cleanedHtml = substr($html, $startPos, $endPos - $startPos + 1);
+                } else {
+                    $pattern = '/^```(?:\w+)?\s*\n?(.*?)\n?```$/s';
+                    $cleanedHtml = preg_replace($pattern, '$1', trim($html));
+                }
+
+                if (empty($cleanedHtml)) {
+                    throw new \Exception('API response was empty after cleaning markdown fences.');
+                }
+
+                $html = $cleanedHtml;
+
+                $summary = new MarketSummary();
+                $summary->setHtmlResult($html);
+                $summary->setCreatedAt(new \DateTimeImmutable());
+                $timeLoaded = (int) round(microtime(true) - $start);
+                $summary->setTimeLoaded($timeLoaded);
+                $em->persist($summary);
+                $em->flush();
+
+                break;
 
             } catch (\Throwable $e) {
                 if ($attempt === $maxRetries) {
                     return new JsonResponse([
-                        'html_result' => 'Error after max retries -> ' . $e->getMessage(),
+                        'html_result' => 'Error after max retries: ' . $e->getMessage(),
                     ], 500);
                 }
+                sleep($retryDelaySeconds);
             }
-
-            sleep($retryDelaySeconds); // wait before retry
         }
 
         return new JsonResponse([
