@@ -68,29 +68,45 @@
             $('#summary-spinner').removeClass('d-none');
             $('#refresh-summary').attr('disabled', true);
             $('#market-summary-container').html('<div class="alert alert-info">Fetching data...</div>');
+            $('#no-summary-label').hide(); // hide previous label
 
             startTimer();
+
+            let timeoutWarning = setTimeout(function () {
+                $('#no-summary-label')
+                    .text('This is taking longer than expected. Please try again later or check the server.')
+                    .removeClass('d-none')
+                    .addClass('alert-warning');
+            }, 60000); // 60 seconds
 
             $.ajax({
                 url: '{{ path("api_market_summary_json") }}',
                 method: 'GET',
                 success: function (response) {
-                    console.log('response.html_result',response.html_result)
+                    console.log('response.html_result', response.html_result);
+                    clearTimeout(timeoutWarning); // clear timeout on success
+
                     if (response.html_result) {
                         $('#market-summary-container')
                             .removeClass('d-none')
                             .html(response.html_result);
-                        $('#no-summary-label').hide(); // hide label if previously visible
+                        $('#no-summary-label').hide();
                     } else {
                         $('#market-summary-container')
                             .removeClass('d-none')
                             .html('');
-                        $('#no-summary-label').text('No summary was returned. Please try again later.').show();
+                        $('#no-summary-label')
+                            .text('No summary was returned. Please try again later.')
+                            .removeClass('d-none')
+                            .addClass('alert-warning');
                     }
                 },
                 error: function (xhr) {
+                    clearTimeout(timeoutWarning); // clear timeout on error
                     $('#market-summary-container').html(
-                        '<div class="alert alert-danger">Error loading market summary: ' + (xhr.responseJSON?.error || 'Unknown error') + '</div>'
+                        '<div class="alert alert-danger">Error loading market summary: ' +
+                        (xhr.responseJSON?.error || 'Unknown error') +
+                        '</div>'
                     );
                 },
                 complete: function () {
@@ -100,6 +116,7 @@
                 }
             });
         }
+
 
         $(document).ready(function () {
             // loadMarketSummary();

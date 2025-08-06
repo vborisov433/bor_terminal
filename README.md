@@ -14,6 +14,7 @@ npm run start-dev
 
 cd /var/www/bor_terminal
 php bin/console doctrine:migrations:migrate --no-interaction
+git reset --hard
 git pull
 
 

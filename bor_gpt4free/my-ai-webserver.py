@@ -94,7 +94,7 @@ def api_ask_gpt():
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(ask_gpt, question)
         try:
-            answer = future.result(timeout=55)
+            answer = future.result(timeout=120)
             return jsonify({"answer": answer})
         except concurrent.futures.TimeoutError:
             return jsonify({"error": "Request timed out. Try again later."}), 504
