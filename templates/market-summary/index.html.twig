@@ -6,6 +6,7 @@
     <div class="container my-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="mb-0">Market Summary</h2>
+
             <div>
                 <span id="elapsed-time" class="text-muted me-3 small"></span>
                 <button id="refresh-summary" class="btn btn-outline-primary">
@@ -15,9 +16,30 @@
             </div>
         </div>
 
-        <div id="market-summary-container">
+        <div class="mb-3">
+            <label for="summary-selector" class="form-label">Saved Summaries:</label>
+            <select id="summary-selector" class="form-select w-auto d-inline-block">
+                {% for summary in summaries %}
+                    <option value="{{ summary.id }}" {% if summary.id == selected_summary_id %}selected{% endif %}>
+                        {{ summary.createdAt|date('Y-m-d H:i') }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if market_summary_html %}
+            <div class="summary-container mt-4">
+                {{ market_summary_html|raw }}
+            </div>
+        {% else %}
+            <p>No summary available. Please refresh to generate.</p>
+        {% endif %}
+
+        <div id="market-summary-container" class="d-none">
             <div class="alert alert-info">Loading market summary...</div>
         </div>
+
+        <div id="no-summary-label" class="alert alert-warning d-none"></div>
     </div>
 
     <script>
@@ -53,7 +75,18 @@
                 url: '{{ path("api_market_summary_json") }}',
                 method: 'GET',
                 success: function (response) {
-                    $('#market-summary-container').html(response.html_result);
+                    console.log('response.html_result',response.html_result)
+                    if (response.html_result) {
+                        $('#market-summary-container')
+                            .removeClass('d-none')
+                            .html(response.html_result);
+                        $('#no-summary-label').hide(); // hide label if previously visible
+                    } else {
+                        $('#market-summary-container')
+                            .removeClass('d-none')
+                            .html('');
+                        $('#no-summary-label').text('No summary was returned. Please try again later.').show();
+                    }
                 },
                 error: function (xhr) {
                     $('#market-summary-container').html(
@@ -69,12 +102,20 @@
         }
 
         $(document).ready(function () {
-            loadMarketSummary();
+            // loadMarketSummary();
 
             $('#refresh-summary').click(function () {
                 loadMarketSummary();
             });
         });
+
+        $('#summary-selector').on('change', function () {
+            const selectedId = $(this).val();
+            if (selectedId) {
+                window.location.href = window.location.pathname + '?id=' + encodeURIComponent(selectedId);
+            }
+        });
+
     </script>
 
 {% endblock %}

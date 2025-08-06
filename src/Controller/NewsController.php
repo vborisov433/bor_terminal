@@ -2,7 +2,10 @@
 
 namespace App\Controller;
 
+use App\Entity\MarketSummary;
+use App\Repository\MarketSummaryRepository;
 use App\Repository\NewsItemRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -79,7 +82,7 @@ final class NewsController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        $data = array_map(function($item) {
+        $data = array_map(function ($item) {
             /** @var \App\Entity\NewsItem $item */
             return [
                 'id' => $item->getId(),
@@ -98,7 +101,7 @@ final class NewsController extends AbstractController
                     'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
                     'summary' => $item->getArticleInfo()->getSummary(),
                 ] : null,
-                'marketAnalyses' => array_map(function($ma) {
+                'marketAnalyses' => array_map(function ($ma) {
                     return [
                         'market' => $ma->getMarket(),
                         'sentiment' => $ma->getSentiment(),
@@ -113,40 +116,82 @@ final class NewsController extends AbstractController
 
         return new JsonResponse($data);
     }
-
     #[Route('/market-summary', name: 'api_news_market_summary', methods: ['GET'])]
-    public function marketSummary(NewsItemRepository $repo, HttpClientInterface $http)
-    {
-        return $this->render('/market-summary/index.html.twig', [
-            'market_summary_html' => null,
-        ]);
+    public function marketSummary(
+        Request $request,
+        MarketSummaryRepository $summaryRepo
+    ): Response {
+        $id = $request->query->get('id');
 
+        $summaries = $summaryRepo->findBy([], ['createdAt' => 'DESC']);
+
+        $selectedSummary = null;
+        if ($id) {
+            $selectedSummary = $summaryRepo->find($id);
+        }
+
+        if (!$selectedSummary) {
+            $selectedSummary = $summaryRepo->findOneBy([], ['createdAt' => 'DESC']);
+        }
+
+        return $this->render('market-summary/index.html.twig', [
+            'summaries' => $summaries,
+            'market_summary_html' => $selectedSummary?->getHtmlResult(),
+            'selected_summary_id' => $selectedSummary?->getId(),
+            'selected_summary_date' => $selectedSummary?->getCreatedAt(),
+        ]);
     }
 
+
     #[Route('/api/market-summary', name: 'api_market_summary_json', methods: ['GET'])]
-    public function marketSummaryJson(NewsItemRepository $repo, HttpClientInterface $http): JsonResponse
-    {
+    public function marketSummaryJson(
+        NewsItemRepository $repo,
+        HttpClientInterface $http,
+        EntityManagerInterface $em
+    ): JsonResponse {
         $question = [
             'question' => $this->get_all_news($repo) . ' given the information show summary for different markets in short way, add bullets top news points that move markets, style in bootstrap 5 table and html, return in json format `html_result`',
         ];
 
-        try {
-            $response = $http->request('POST', 'http://localhost:5000/api/ask-gpt', [
-                'json' => $question
-            ]);
+        $maxRetries = 5;
+        $retryDelaySeconds = 7;
+        $html = null;
 
-            $data = $response->toArray();
-            $summaryJson = $data['answer'] ?? '';
-            $data = json_decode($summaryJson, true);
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $response = $http->request('POST', 'http://localhost:5000/api/ask-gpt', [
+                    'json' => $question
+                ]);
 
-            return new JsonResponse([
-                'html_result' => $data['html_result'] ?? null
-            ]);
-        } catch (\Throwable $e) {
-            return new JsonResponse([
-                'html_result' => 'Error talking to GPT service -> ' . $e->getMessage(),
-            ], 500);
+                $apiResponse = $response->toArray();
+                $decodedAnswer = json_decode($apiResponse['answer'] ?? '', true);
+                $html = $decodedAnswer['html_result'] ?? null;
+
+                if ($html) {
+                    // Save to DB only on first successful fetch
+                    $summary = new MarketSummary();
+                    $summary->setHtmlResult($html);
+                    $summary->setCreatedAt(new \DateTimeImmutable());
+
+                    $em->persist($summary);
+                    $em->flush();
+
+                    break;
+                }
+
+            } catch (\Throwable $e) {
+                if ($attempt === $maxRetries) {
+                    return new JsonResponse([
+                        'html_result' => 'Error after max retries -> ' . $e->getMessage(),
+                    ], 500);
+                }
+            }
+
+            sleep($retryDelaySeconds); // wait before retry
         }
-    }
 
+        return new JsonResponse([
+            'html_result' => $html ?? 'No summary could be generated after ' . $maxRetries . ' attempts.'
+        ]);
+    }
 }
