@@ -89,11 +89,7 @@
                     clearTimeout(timeoutWarning); // clear timeout on success
 
                     if (response.html_result) {
-                        $('#summary-container').html('');
-                        $('#summary-container')
-                            .removeClass('d-none')
-                            .html(response.html_result);
-                        $('#no-summary-label').hide();
+                        window.location.href = '{{ path("api_news_market_summary") }}';
                     } else {
                         $('#summary-container')
                             .removeClass('d-none')

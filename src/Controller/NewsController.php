@@ -157,7 +157,7 @@ final class NewsController extends AbstractController
             'question' => json_encode($this->get_all_news($repo)) .
                 ' given the information show summary for different markets in short way, 
                 add bullets top news points that move markets, 
-                use table th: Market,Sentiment,Magnitude (0-10),Summary Impact,
+                use table th: Market,Direction,Quick Summary,Top News Movers,
                 style in bootstrap 5 table and html, return in json format `html_result`',
         ];
 
