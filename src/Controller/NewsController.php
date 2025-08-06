@@ -157,12 +157,20 @@ final class NewsController extends AbstractController
         $start = microtime(true);
         $question = [
             'question' => json_encode($this->get_all_news($repo)) .
-                ' given the information show summary for different markets in short way, 
-                add bullets top news points that move markets, 
-                use headers: Market,Direction,Quick Summary,Top News Movers,
-                make small responsive table for summary and most info use card
-                style in bootstrap 5, return string with html only',
+                ' given the information show summary
+                explain what to look for in the markets with bullets,
+                , style for mobile
+                use bootstrap 5, icons, return string with html only',
         ];
+
+//        $question = [
+//            'question' => json_encode($this->get_all_news($repo)) .
+//                ' given the information show summary for different markets,
+//                bullets for top news ideas that move markets,
+//                use responsive table headers: Market & Direction,Quick Summary,
+//                use cards for Top News Movers, Market summary
+//                style in bootstrap 5, return string with html only',
+//        ];
 
         $maxRetries = 5;
         $retryDelaySeconds = 7;
