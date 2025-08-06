@@ -188,6 +188,7 @@ final class NewsController extends AbstractController
                     $em->flush();
                     break;
                 }else{
+                    dump('$html is null');
                     dd($apiResponse);
                 }
 
