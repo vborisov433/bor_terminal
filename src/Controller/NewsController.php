@@ -154,11 +154,11 @@ final class NewsController extends AbstractController
         $start = microtime(true);
         $question = [
             'question' => json_encode($this->get_all_news($repo)) .
-                'style for mobile ,use bootstrap 5, icons, jquery imported already return json string with html only, total Characters less than 5000
+                'style for mobile ,use bootstrap 5, icons, jquery imported, return html string only,Characters less than 5000
                  use table, with headers Market & Direction,Quick Summary
                  given the information show summary
                 explain what to look for in the markets with bullets,
-                add tts jquery code, toggle start stop tts button position top right,
+                add tts using jquery  toggle btn  top right for whole container-fluid,
                 ',
         ];
 
@@ -178,22 +178,8 @@ final class NewsController extends AbstractController
 
                 $apiResponse = $response->toArray();
                 $html = $apiResponse['answer'] ?? null;
-
-                $startPos = strpos($html, '<');
-                $endPos = strrpos($html, '>');
-
-                if ($startPos !== false && $endPos !== false && $endPos > $startPos) {
-                    $cleanedHtml = substr($html, $startPos, $endPos - $startPos + 1);
-                } else {
-                    $pattern = '/^```(?:\w+)?\s*\n?(.*?)\n?```$/s';
-                    $cleanedHtml = preg_replace($pattern, '$1', trim($html));
-                }
-
-                if (empty($cleanedHtml)) {
-                    throw new \Exception('API response was empty after cleaning markdown fences.');
-                }
-
-                $html = $cleanedHtml;
+                $html = str_replace('```html', '', $html);
+                $html = str_replace('```', '', $html);
 
                 $summary = new MarketSummary();
                 $summary->setHtmlResult($html);
