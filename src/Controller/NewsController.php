@@ -157,11 +157,12 @@ final class NewsController extends AbstractController
         $start = microtime(true);
         $question = [
             'question' => json_encode($this->get_all_news($repo)) .
-                ' given the information show summary
+                'style for mobile ,use bootstrap 5, icons, jquery imported already return json string with html only, total Characters less than 5000
+                 use table, with headers Market & Direction,Quick Summary
+                 given the information show summary
                 explain what to look for in the markets with bullets,
-                , style for mobile
-                implement tts we use bootstrap already, toggle start stop tts button
-                use bootstrap 5, icons, return string with html only',
+                add tts jquery code, toggle start stop tts button position top right,
+                ',
         ];
 
 //        $question = [
@@ -188,7 +189,11 @@ final class NewsController extends AbstractController
                 }
 
                 $apiResponse = $response->toArray();
+//                dd($apiResponse);
+
                 $html = $apiResponse['answer'] ?? null;
+
+//                dd($html);
 
                 $startPos = strpos($html, '<');
                 $endPos = strrpos($html, '>');
