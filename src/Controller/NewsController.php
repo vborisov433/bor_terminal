@@ -160,6 +160,7 @@ final class NewsController extends AbstractController
                 ' given the information show summary
                 explain what to look for in the markets with bullets,
                 , style for mobile
+                implement tts we use bootstrap already, toggle start stop tts button
                 use bootstrap 5, icons, return string with html only',
         ];
 
