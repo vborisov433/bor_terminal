@@ -140,6 +140,7 @@ final class NewsController extends AbstractController
             'market_summary_html' => $selectedSummary?->getHtmlResult(),
             'selected_summary_id' => $selectedSummary?->getId(),
             'selected_summary_date' => $selectedSummary?->getCreatedAt(),
+            'time_loaded' => $selectedSummary?->getTimeLoaded(),
         ]);
     }
 
@@ -153,12 +154,14 @@ final class NewsController extends AbstractController
 
 //        dd($this->get_all_news($repo)); //debug
 
+        $start = microtime(true);
         $question = [
             'question' => json_encode($this->get_all_news($repo)) .
                 ' given the information show summary for different markets in short way, 
                 add bullets top news points that move markets, 
-                use table th: Market,Direction,Quick Summary,Top News Movers,
-                style in bootstrap 5 table and html, return in json format `html_result`',
+                use headers: Market,Direction,Quick Summary,Top News Movers,
+                make it mobile friendly
+                style in bootstrap 5 html, return in json format `html_result`',
         ];
 
         $maxRetries = 5;
@@ -176,10 +179,12 @@ final class NewsController extends AbstractController
                 $html = $decodedAnswer['html_result'] ?? null;
 
                 if ($html) {
-                    // Save to DB only on first successful fetch
                     $summary = new MarketSummary();
                     $summary->setHtmlResult($html);
                     $summary->setCreatedAt(new \DateTimeImmutable());
+
+                    $elapsed = microtime(true) - $start;
+                    $summary->setTimeLoaded((int) round($elapsed));
 
                     $em->persist($summary);
                     $em->flush();

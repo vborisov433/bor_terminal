@@ -16,6 +16,9 @@ class MarketSummary
     #[ORM\Column(type: "text")]
     private string $htmlResult;
 
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $timeLoaded = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -48,5 +51,15 @@ class MarketSummary
 
     #[ORM\Column(type: "datetime_immutable")]
     private \DateTimeImmutable $createdAt;
+
+    public function getTimeLoaded(): ?int
+    {
+        return $this->timeLoaded;
+    }
+
+    public function setTimeLoaded(?int $timeLoaded): void
+    {
+        $this->timeLoaded = $timeLoaded;
+    }
 
 }

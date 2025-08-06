@@ -34,6 +34,15 @@
         <div id="no-summary-label" class="alert alert-warning d-none"></div>
 
         {% if market_summary_html %}
+            {% if time_loaded is not null %}
+                <p class="text-muted small">
+                    Loaded in
+                    {% set minutes = (time_loaded // 60) %}
+                    {% set seconds = (time_loaded % 60) %}
+                    {{ minutes > 0 ? minutes ~ ' min ' : '' }}{{ seconds }} sec
+                </p>
+            {% endif %}
+
             <div class="summary-container mt-4">
                 {{ market_summary_html|raw }}
             </div>
