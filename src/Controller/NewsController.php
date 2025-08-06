@@ -151,9 +151,6 @@ final class NewsController extends AbstractController
         HttpClientInterface $http,
         EntityManagerInterface $em
     ): JsonResponse {
-
-//        dd($this->get_all_news($repo)); //debug
-
         $start = microtime(true);
         $question = [
             'question' => json_encode($this->get_all_news($repo)) .
@@ -164,15 +161,6 @@ final class NewsController extends AbstractController
                 add tts jquery code, toggle start stop tts button position top right,
                 ',
         ];
-
-//        $question = [
-//            'question' => json_encode($this->get_all_news($repo)) .
-//                ' given the information show summary for different markets,
-//                bullets for top news ideas that move markets,
-//                use responsive table headers: Market & Direction,Quick Summary,
-//                use cards for Top News Movers, Market summary
-//                style in bootstrap 5, return string with html only',
-//        ];
 
         $maxRetries = 5;
         $retryDelaySeconds = 7;
@@ -189,11 +177,7 @@ final class NewsController extends AbstractController
                 }
 
                 $apiResponse = $response->toArray();
-//                dd($apiResponse);
-
                 $html = $apiResponse['answer'] ?? null;
-
-//                dd($html);
 
                 $startPos = strpos($html, '<');
                 $endPos = strrpos($html, '>');
@@ -220,7 +204,6 @@ final class NewsController extends AbstractController
                 $em->flush();
 
                 break;
-
             } catch (\Throwable $e) {
                 if ($attempt === $maxRetries) {
                     return new JsonResponse([
