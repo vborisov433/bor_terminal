@@ -80,7 +80,7 @@ final class NewsController extends AbstractController
             ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
             ->andWhere('a.newsSurpriseIndex > 4')
             ->orderBy('n.id', 'DESC')
-            ->setMaxResults(25)
+            ->setMaxResults(19)
             ->getQuery()
             ->getResult();
 
@@ -100,21 +100,24 @@ final class NewsController extends AbstractController
 //                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
                     'newsSurpriseIndex' => $item->getArticleInfo()->getNewsSurpriseIndex(),
                     'economyImpact' => $item->getArticleInfo()->getEconomyImpact(),
-                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
+//                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
 //                    'summary' => $item->getArticleInfo()->getSummary(),
                 ] : null,
-                'marketAnalyses' => array_map(function ($ma) {
-                    return [
-                        'market' => $ma->getMarket(),
-                        'sentiment' => $ma->getSentiment(),
-                        'magnitude' => $ma->getMagnitude(),
-//                        'reason' => $ma->getReason(),
-//                        'keywords' => $ma->getKeywords(),
-//                        'categories' => $ma->getCategories(),
-                    ];
-                }, $item->getMarketAnalyses()->toArray()),
+//                'marketAnalyses' => array_map(function ($ma) {
+//                    return [
+//                        'market' => $ma->getMarket(),
+//                        'sentiment' => $ma->getSentiment(),
+//                        'magnitude' => $ma->getMagnitude(),
+////                        'reason' => $ma->getReason(),
+////                        'keywords' => $ma->getKeywords(),
+////                        'categories' => $ma->getCategories(),
+//                    ];
+//                }, $item->getMarketAnalyses()->toArray()),
             ];
         }, $newsItems);
+
+//        dd(count($data));
+//        dd(json_encode($data[0]));
 
         return $data;
     }
