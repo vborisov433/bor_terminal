@@ -154,11 +154,11 @@ final class NewsController extends AbstractController
         $start = microtime(true);
         $question = [
             'question' => json_encode($this->get_all_news($repo)) .
-                'style for mobile ,use bootstrap 5, icons, jquery imported, return html string only,Characters less than 4500
-                 use table, with headers Market & Direction,Quick Summary
+                'style for mobile container-fluid p-1 ,use bootstrap 5, icons, jquery imported, return html string only,Characters less than 4200
+                 use table-responsive, with headers Market & Direction,Quick Summary
                  given the information show summary
-                explain what to look for in the markets with bullets,
-                add btn top right with icon speaker,
+                 use table-responsive add future positive and negative events
+                explain what to look for in the markets with bullets
                 ',
         ];
 
