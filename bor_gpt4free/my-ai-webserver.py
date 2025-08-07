@@ -1,6 +1,8 @@
 from flask import Flask, request, render_template_string, jsonify
 from g4f.client import Client
 import concurrent.futures
+import logging
+import os
 
 app = Flask(__name__)
 client = Client()
@@ -81,24 +83,41 @@ def index():
                 error = f"An unexpected error occurred: {str(e)}"
     return render_template_string(HTML_TEMPLATE, answer=answer, question=question, error=error)
 
+log_dir = './LOGS'
+os.makedirs(log_dir, exist_ok=True)
+log_file_path = os.path.join(log_dir, 'log.txt')
+
+logging.basicConfig(
+    filename=log_file_path,
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s',
+)
+
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask_gpt():
     if not request.is_json:
+#         logging.warning("Request is not JSON")
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
     data = request.get_json()
     question = data.get("question", "")
     if not question:
+#         logging.warning("Missing 'question' in the request body.")
         return jsonify({"error": "Missing 'question' in the request body."}), 400
+
+#     logging.info(f"Received question: {question}")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(ask_gpt, question)
         try:
             answer = future.result(timeout=120)
+#             logging.info(f"Generated answer: {answer}")
             return jsonify({"answer": answer})
         except concurrent.futures.TimeoutError:
+#             logging.error("Timeout while processing question.")
             return jsonify({"answer": "Request timed out. Try again later."}), 504
         except Exception as e:
+            logging.exception("Internal error during GPT request.")
             return jsonify({"answer": f"Internal error: {str(e)}"}), 500
 
 if __name__ == '__main__':

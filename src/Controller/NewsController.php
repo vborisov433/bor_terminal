@@ -75,42 +75,42 @@ final class NewsController extends AbstractController
 
     public function get_all_news(NewsItemRepository $repo)
     {
-        // Fetch all NewsItem entities and join related data
         $newsItems = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
             ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
             ->andWhere('a.newsSurpriseIndex > 4')
             ->orderBy('n.id', 'DESC')
+            ->setMaxResults(25)
             ->getQuery()
             ->getResult();
 
         $data = array_map(function ($item) {
             /** @var \App\Entity\NewsItem $item */
             return [
-                'id' => $item->getId(),
+//                'id' => $item->getId(),
                 'title' => $item->getTitle(),
                 'link' => $item->getLink(),
-                'date' => $item->getDate()?->format('Y-m-d'),
-                'gptAnalysis' => $item->getGptAnalysis(),
-                'analyzed' => $item->isAnalyzed(),
-                'completed' => $item->isCompleted(),
-                'createdAt' => $item->getCreatedAt()?->format('Y-m-d H:i:s'),
+//                'date' => $item->getDate()?->format('Y-m-d'),
+//                'gptAnalysis' => $item->getGptAnalysis(),
+//                'analyzed' => $item->isAnalyzed(),
+//                'completed' => $item->isCompleted(),
+//                'createdAt' => $item->getCreatedAt()?->format('Y-m-d H:i:s'),
                 'articleInfo' => $item->getArticleInfo() ? [
-                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
-                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
+//                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
+//                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
                     'newsSurpriseIndex' => $item->getArticleInfo()->getNewsSurpriseIndex(),
                     'economyImpact' => $item->getArticleInfo()->getEconomyImpact(),
                     'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
-                    'summary' => $item->getArticleInfo()->getSummary(),
+//                    'summary' => $item->getArticleInfo()->getSummary(),
                 ] : null,
                 'marketAnalyses' => array_map(function ($ma) {
                     return [
                         'market' => $ma->getMarket(),
                         'sentiment' => $ma->getSentiment(),
                         'magnitude' => $ma->getMagnitude(),
-                        'reason' => $ma->getReason(),
-                        'keywords' => $ma->getKeywords(),
-                        'categories' => $ma->getCategories(),
+//                        'reason' => $ma->getReason(),
+//                        'keywords' => $ma->getKeywords(),
+//                        'categories' => $ma->getCategories(),
                     ];
                 }, $item->getMarketAnalyses()->toArray()),
             ];
@@ -153,14 +153,21 @@ final class NewsController extends AbstractController
         EntityManagerInterface $em
     ): JsonResponse {
         $start = microtime(true);
-        $question = [
-            'question' => json_encode($this->get_all_news($repo)) .
-                'style for mobile container-fluid p-1 ,use bootstrap 5, icons, jquery imported, return html string only,use less than 300 words
+
+        $_question = json_encode($this->get_all_news($repo)) .
+            'style for mobile container-fluid p-1 ,use bootstrap 5, icons, jquery imported, return 1 line,no whitespace html string only,use less than 2000 chars
                  use table-responsive, with headers Market & Direction,Quick Summary
                  given the information show summary
                  use table-responsive add future positive and negative events
                 explain what to look for in the markets with bullets
-                ',
+                ';
+
+        $_question =preg_replace('/\s+/', ' ', trim($_question));
+
+//        dd(strlen($_question));
+
+        $question = [
+            'question' =>  $_question
         ];
 
         $maxRetries = 5;
@@ -174,7 +181,9 @@ final class NewsController extends AbstractController
                 ]);
 
                 if ($response->getStatusCode() >= 300) {
-                    throw new \Exception('API returned a non-successful status code: ' . $response->getStatusCode());
+                    throw new \Exception('API returned a non-successful status code: ' . $response->getStatusCode()); //debug the message
+
+
                 }
 
 //                $apiResponse = $response->toArray();
@@ -183,6 +192,9 @@ final class NewsController extends AbstractController
 //                $html = str_replace('```', '', $html);
 
                 $apiResponse = $response->toArray();
+
+//                dump($apiResponse);
+
                 $html = $apiResponse['answer'] ?? null;
                 $html = str_replace(['```html', '```'], '', $html);
 
