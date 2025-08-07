@@ -6,6 +6,7 @@ use App\Entity\MarketSummary;
 use App\Repository\MarketSummaryRepository;
 use App\Repository\NewsItemRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use DOMDocument;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -154,7 +155,7 @@ final class NewsController extends AbstractController
         $start = microtime(true);
         $question = [
             'question' => json_encode($this->get_all_news($repo)) .
-                'style for mobile container-fluid p-1 ,use bootstrap 5, icons, jquery imported, return html string only,Characters less than 4200
+                'style for mobile container-fluid p-1 ,use bootstrap 5, icons, jquery imported, return html string only,use less than 300 words
                  use table-responsive, with headers Market & Direction,Quick Summary
                  given the information show summary
                  use table-responsive add future positive and negative events
@@ -176,10 +177,26 @@ final class NewsController extends AbstractController
                     throw new \Exception('API returned a non-successful status code: ' . $response->getStatusCode());
                 }
 
+//                $apiResponse = $response->toArray();
+//                $html = $apiResponse['answer'] ?? null;
+//                $html = str_replace('```html', '', $html);
+//                $html = str_replace('```', '', $html);
+
                 $apiResponse = $response->toArray();
                 $html = $apiResponse['answer'] ?? null;
-                $html = str_replace('```html', '', $html);
-                $html = str_replace('```', '', $html);
+                $html = str_replace(['```html', '```'], '', $html);
+
+//                dump($html);
+
+                libxml_use_internal_errors(true);
+                $doc = new DOMDocument();
+                $isValid = $doc->loadHTML('<?xml encoding="utf-8" ?>' . $html);
+                $errors = libxml_get_errors();
+                libxml_clear_errors();
+
+                if (!$isValid || !empty($errors)) {
+                    throw new \Exception('Invalid HTML');
+                }
 
                 $summary = new MarketSummary();
                 $summary->setHtmlResult($html);
