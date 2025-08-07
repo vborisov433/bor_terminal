@@ -196,7 +196,7 @@ final class NewsController extends AbstractController
 
                 $apiResponse = $response->toArray();
 
-//                dump($apiResponse);
+                dump($apiResponse);
 
                 $html = $apiResponse['answer'] ?? null;
                 $html = str_replace(['```html', '```'], '', $html);
