@@ -113,4 +113,15 @@ class NewsArticleInfo
         $this->summary = $summary;
     }
 
+    public function toString(): string
+    {
+        return sprintf(
+            'Headline: %s | Market Impact: %s | Surprise Index: %s | Economy Impact: %s',
+            $this->getTitleHeadline() ?? 'N/A',
+            $this->hasMarketImpact() ? 'Yes' : 'No',
+            $this->getNewsSurpriseIndex() ?? 'N/A',
+            $this->getEconomyImpact() ?? 'N/A'
+        );
+    }
+
 }

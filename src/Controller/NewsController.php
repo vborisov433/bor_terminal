@@ -87,90 +87,105 @@ final class NewsController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        $data = array_map(function ($item) {
-            /** @var \App\Entity\NewsItem $item */
-            // return read from #link
-            return [
-                'id' => $item->getId(),
-                'title' => $item->getTitle(),
-                'news' => $item->getLink(),
-                'date' => $item->getDate()?->format('Y-m-d'),
-                'gptAnalysis' => $item->getGptAnalysis(),
-                'analyzed' => $item->isAnalyzed(),
-                'completed' => $item->isCompleted(),
-                'createdAt' => $item->getCreatedAt()?->format('Y-m-d H:i:s'),
-                'articleInfo' => $item->getArticleInfo() ? [
-                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
-                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
-                    'newsSurpriseIndex' => $item->getArticleInfo()->getNewsSurpriseIndex(),
-                    'economyImpact' => $item->getArticleInfo()->getEconomyImpact(),
-                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
-                    'summary' => $item->getArticleInfo()->getSummary(),
-                ] : null,
-                'analyses' => implode(',',array_map(function ($ma) {
-                    return $ma->getMarket() .' '. $ma->getSentiment();
-                    return [
-                        'market' => $ma->getMarket(),
-                        'sentiment' => $ma->getSentiment(),
-                        'magnitude' => $ma->getMagnitude(),
-                        'reason' => $ma->getReason(),
-                        'keywords' => $ma->getKeywords(),
-                        'categories' => $ma->getCategories(),
-                    ];
-                }, $item->getMarketAnalyses()->toArray())),
-            ];
-        }, $newsItems);
-
-        return new JsonResponse($data);
-    }
-
-    public function get_all_news(NewsItemRepository $repo)
-    {
-        $newsItems = $repo->createQueryBuilder('n')
-            ->leftJoin('n.articleInfo', 'a')->addSelect('a')
-            ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
-            ->andWhere('a.newsSurpriseIndex > 4')
-            ->orderBy('n.id', 'DESC')
-            ->setMaxResults(20)
-            ->getQuery()
-            ->getResult();
-
-        $data = array_map(function ($item) {
-            /** @var \App\Entity\NewsItem $item */
-            // return read from #link
-            return [
+//        $data = array_map(function ($item) {
+//            /** @var \App\Entity\NewsItem $item */
+//            // return read from #link
+//            return [
 //                'id' => $item->getId(),
 //                'title' => $item->getTitle(),
-                'news' => $item->getLink(),
+//                'news' => $item->getLink(),
 //                'date' => $item->getDate()?->format('Y-m-d'),
 //                'gptAnalysis' => $item->getGptAnalysis(),
 //                'analyzed' => $item->isAnalyzed(),
 //                'completed' => $item->isCompleted(),
 //                'createdAt' => $item->getCreatedAt()?->format('Y-m-d H:i:s'),
 //                'articleInfo' => $item->getArticleInfo() ? [
-////                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
-////                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
+//                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
+//                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
 //                    'newsSurpriseIndex' => $item->getArticleInfo()->getNewsSurpriseIndex(),
 //                    'economyImpact' => $item->getArticleInfo()->getEconomyImpact(),
-////                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
-////                    'summary' => $item->getArticleInfo()->getSummary(),
+//                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
+//                    'summary' => $item->getArticleInfo()->getSummary(),
 //                ] : null,
-                'analyses' => implode(',',array_map(function ($ma) {
-                    return $ma->getMarket() .' '. $ma->getSentiment();
+//                'analyses' => implode(',',array_map(function ($ma) {
+//                    return $ma->getMarket() .' '. $ma->getSentiment();
 //                    return [
-////                        'market' => $ma->getMarket(),
-////                        'sentiment' => $ma->getSentiment(),
-////                        'magnitude' => $ma->getMagnitude(),
-////                        'reason' => $ma->getReason(),
-////                        'keywords' => $ma->getKeywords(),
-////                        'categories' => $ma->getCategories(),
+//                        'market' => $ma->getMarket(),
+//                        'sentiment' => $ma->getSentiment(),
+//                        'magnitude' => $ma->getMagnitude(),
+//                        'reason' => $ma->getReason(),
+//                        'keywords' => $ma->getKeywords(),
+//                        'categories' => $ma->getCategories(),
 //                    ];
-                }, $item->getMarketAnalyses()->toArray())),
-            ];
-        }, $newsItems);
+//                }, $item->getMarketAnalyses()->toArray())),
+//            ];
+//        }, $newsItems);
+
+        $data = array_map(fn($i)=>implode('|',[
+//            $i->getId(),
+            $i->getTitle(),
+            $i->getLink(),
+//            $i->getDate()?->format('Y-m-d'),
+//            $i->getGptAnalysis(),
+//            $i->isAnalyzed(),
+//            $i->isCompleted(),
+//            $i->getCreatedAt()?->format('Y-m-d H:i:s'),
+//            $i->getArticleInfo()?->toString(),
+//            $info?$info->hasMarketImpact():'',
+//            $info?$info->getTitleHeadline():'',
+//            $info?$info->getNewsSurpriseIndex():'',
+//            $info?$info->getEconomyImpact():'',
+//            $info?$info->getMacroKeywordHeatmap():'',
+//            $info?$info->getSummary():'',
+            $i->getArticleInfo()?->getSummary(),
+            $i->marketAnalysesToString()
+//            implode(',', array_map(fn($ma) => $ma->getMarket().' '.$ma->getSentiment(), $i->getMarketAnalyses()->toArray()))
+
+        ]),$newsItems);
+
+        return new JsonResponse($data);
+    }
+
+    public function get_all_news(NewsItemRepository $repo)
+    {
+        $LIMIT_ARTICLES = 5;
+
+        $newsItems = $repo->createQueryBuilder('n')
+            ->leftJoin('n.articleInfo', 'a')->addSelect('a')
+            ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
+            ->andWhere('a.newsSurpriseIndex > 6')
+            ->andWhere('a.economyImpact > 5')
+            ->orderBy('n.id', 'DESC') // limit to 5 setMaxResults doesnt work
+            ->getQuery()
+            ->getResult();
+
+        $newsItems = array_slice($newsItems, 0, $LIMIT_ARTICLES);
+
+
+        $data = array_map(fn($i)=>implode(',',[
+//            $i->getId(),
+            $i->getTitle(),
+//            $i->getLink(),
+//            $i->getDate()?->format('Y-m-d'),
+//            $i->getGptAnalysis(),
+//            $i->isAnalyzed(),
+//            $i->isCompleted(),
+//            $i->getCreatedAt()?->format('Y-m-d H:i:s'),
+//            $i->getArticleInfo()?->toString(),
+//            $info?$info->hasMarketImpact():'',
+//            $info?$info->getTitleHeadline():'',
+//            $info?$info->getNewsSurpriseIndex():'',
+//            $info?$info->getEconomyImpact():'',
+            implode(',',$i->getArticleInfo()->getMacroKeywordHeatmap()),
+//            $info?$info->getSummary():'',
+            $i->getArticleInfo()?->getSummary(),
+            $i->marketAnalysesToString()
+//            implode(',', array_map(fn($ma) => $ma->getMarket().' '.$ma->getSentiment(), $i->getMarketAnalyses()->toArray()))
+
+        ]),$newsItems);
 
 //        dd($data[0]);
-//        dd(count($data));
+//        dd(strlen($data));
 //        dd(json_encode($data[0]));
 
 
@@ -230,6 +245,8 @@ final class NewsController extends AbstractController
         $_question =preg_replace('/\s+/', ' ', trim($_question));
 
 //        dd(strlen($_question));
+
+//        dd($_question);
 
         $question = [
             'question' =>  $_question

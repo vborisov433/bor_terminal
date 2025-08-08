@@ -157,4 +157,9 @@ class NewsItem
         return $this->createdAt;
     }
 
+    public function marketAnalysesToString(): string
+    {
+        return implode(',', $this->marketAnalyses->map(fn(MarketAnalysis $ma) => $ma->toString())->toArray());
+    }
+
 }

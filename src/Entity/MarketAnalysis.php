@@ -113,4 +113,9 @@ class MarketAnalysis
         $this->categories = $categories;
     }
 
+    public function toString(): string
+    {
+        return sprintf('%s %s', $this->market, $this->sentiment);
+    }
+
 }
