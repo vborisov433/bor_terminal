@@ -80,42 +80,45 @@ final class NewsController extends AbstractController
             ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
             ->andWhere('a.newsSurpriseIndex > 4')
             ->orderBy('n.id', 'DESC')
-            ->setMaxResults(19)
+            ->setMaxResults(45)
             ->getQuery()
             ->getResult();
 
         $data = array_map(function ($item) {
             /** @var \App\Entity\NewsItem $item */
+            // return read from #link
             return [
 //                'id' => $item->getId(),
-                'title' => $item->getTitle(),
-                'link' => $item->getLink(),
+//                'title' => $item->getTitle(),
+                'read' => $item->getLink(),
 //                'date' => $item->getDate()?->format('Y-m-d'),
 //                'gptAnalysis' => $item->getGptAnalysis(),
 //                'analyzed' => $item->isAnalyzed(),
 //                'completed' => $item->isCompleted(),
 //                'createdAt' => $item->getCreatedAt()?->format('Y-m-d H:i:s'),
-                'articleInfo' => $item->getArticleInfo() ? [
-//                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
-//                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
-                    'newsSurpriseIndex' => $item->getArticleInfo()->getNewsSurpriseIndex(),
-                    'economyImpact' => $item->getArticleInfo()->getEconomyImpact(),
-//                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
-//                    'summary' => $item->getArticleInfo()->getSummary(),
-                ] : null,
-//                'marketAnalyses' => array_map(function ($ma) {
+//                'articleInfo' => $item->getArticleInfo() ? [
+////                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
+////                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
+//                    'newsSurpriseIndex' => $item->getArticleInfo()->getNewsSurpriseIndex(),
+//                    'economyImpact' => $item->getArticleInfo()->getEconomyImpact(),
+////                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
+////                    'summary' => $item->getArticleInfo()->getSummary(),
+//                ] : null,
+                'marketAnalyses' => array_map(function ($ma) {
+                    return $ma->getMarket() .' '. $ma->getSentiment();
 //                    return [
-//                        'market' => $ma->getMarket(),
-//                        'sentiment' => $ma->getSentiment(),
-//                        'magnitude' => $ma->getMagnitude(),
+////                        'market' => $ma->getMarket(),
+////                        'sentiment' => $ma->getSentiment(),
+////                        'magnitude' => $ma->getMagnitude(),
 ////                        'reason' => $ma->getReason(),
 ////                        'keywords' => $ma->getKeywords(),
 ////                        'categories' => $ma->getCategories(),
 //                    ];
-//                }, $item->getMarketAnalyses()->toArray()),
+                }, $item->getMarketAnalyses()->toArray()),
             ];
         }, $newsItems);
 
+//        dd($data[0]);
 //        dd(count($data));
 //        dd(json_encode($data[0]));
 
@@ -158,8 +161,8 @@ final class NewsController extends AbstractController
         $start = microtime(true);
 
         $_question = json_encode($this->get_all_news($repo)) .
-            'style for mobile container-fluid p-1 ,use bootstrap 5, icons, jquery imported, return 1 line,no whitespace html string only,use less than 2000 chars
-                 use table-responsive, with headers Market & Direction,Quick Summary
+            'style for mobile container-fluid p-1 ,use bootstrap 5, icons, jquery imported, return 1 line,no whitespace html string only,use less than 4000 chars
+                 use table-responsive, with headers: Market-Direction,Quick Summary
                  given the information show summary
                  use table-responsive add future positive and negative events
                 explain what to look for in the markets with bullets
@@ -173,7 +176,7 @@ final class NewsController extends AbstractController
             'question' =>  $_question
         ];
 
-        $maxRetries = 5;
+        $maxRetries = 2;
         $retryDelaySeconds = 7;
         $html = null;
 
@@ -185,8 +188,6 @@ final class NewsController extends AbstractController
 
                 if ($response->getStatusCode() >= 300) {
                     throw new \Exception('API returned a non-successful status code: ' . $response->getStatusCode()); //debug the message
-
-
                 }
 
 //                $apiResponse = $response->toArray();
@@ -196,7 +197,7 @@ final class NewsController extends AbstractController
 
                 $apiResponse = $response->toArray();
 
-//                dump($apiResponse);
+//              dump($apiResponse);
 
                 $html = $apiResponse['answer'] ?? null;
                 $html = str_replace(['```html', '```'], '', $html);
@@ -210,7 +211,7 @@ final class NewsController extends AbstractController
                 libxml_clear_errors();
 
                 if (!$isValid || !empty($errors)) {
-                    throw new \Exception('Invalid HTML');
+                    throw new \Exception('Invalid HTML \n' .$html );
                 }
 
                 $summary = new MarketSummary();
