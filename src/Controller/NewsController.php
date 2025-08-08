@@ -176,7 +176,7 @@ final class NewsController extends AbstractController
 //            $info?$info->getTitleHeadline():'',
 //            $info?$info->getNewsSurpriseIndex():'',
 //            $info?$info->getEconomyImpact():'',
-            implode(',',$i->getArticleInfo()?->getMacroKeywordHeatmap() ?? []),
+            implode(',', array_map(fn($item) => is_scalar($item) ? $item : json_encode($item), $i->getArticleInfo()?->getMacroKeywordHeatmap() ?? [])),
 //            $info?$info->getSummary():'',
 //            $i->getArticleInfo()?->getSummary(),
             $i->marketAnalysesToString()
