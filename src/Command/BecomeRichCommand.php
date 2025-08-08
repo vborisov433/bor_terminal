@@ -63,11 +63,20 @@ class BecomeRichCommand extends Command
             $entity->setTitle($newsData['title']);
             $entity->setLink($newsData['link']);
             $entity->setDate(new \DateTimeImmutable($newsData['date']));
-            $this->em->persist($entity);
+
+            try {
+                $this->em->persist($entity);
+                $this->em->flush();
+                $newItems[] = $entity;
+                $inserted++;
+            } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+                $skipped++;
+                continue;
+            }
+
             $newItems[] = $entity;
             $inserted++;
         }
-        $this->em->flush();
         $io->success("Imported $inserted new news items.");
         $io->note("Skipped $skipped duplicate items.");
 
