@@ -148,7 +148,7 @@ final class NewsController extends AbstractController
 
     public function get_all_news(NewsItemRepository $repo)
     {
-        $LIMIT_ARTICLES = 18;
+        $LIMIT_ARTICLES = 13;
 
         $newsItems = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
@@ -217,6 +217,20 @@ final class NewsController extends AbstractController
             'selected_summary_date' => $selectedSummary?->getCreatedAt(),
             'time_loaded' => $selectedSummary?->getTimeLoaded(),
         ]);
+    }
+
+    #[Route('/market-summary/delete/{id}', name: 'api_news_market_summary_delete', methods: ['POST'])]
+    public function deleteMarketSummary(MarketSummaryRepository $repo, EntityManagerInterface $em, int $id): JsonResponse
+    {
+        $summary = $repo->find($id);
+        if (!$summary) {
+            return new JsonResponse(['error' => 'Not found'], 404);
+        }
+
+        $em->remove($summary);
+        $em->flush();
+
+        return new JsonResponse(['success' => true]);
     }
 
     #[Route('/api/market-summary', name: 'api_market_summary_json', methods: ['GET'])]
