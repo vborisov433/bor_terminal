@@ -104,7 +104,7 @@
                                         <p class="summary d-flex justify-content-between align-items-start">
                                             <span id="tts-summary-{{ news.id }}">{{ news.articleInfo.summary }}</span>
                                             <button onclick="speakText('tts-summary-{{ news.id }}')" class="btn btn-sm btn-outline-secondary ms-2 btn-speaker">
-                                                <i class="bi bi-chevron-down"></i>
+                                                <i class="bi bi-volume-up"></i>
                                             </button>
                                         </p>
                                         <strong>Heatmap:&nbsp;</strong>
@@ -168,7 +168,7 @@
 
                                                     <td class="summary d-flex justify-content-between align-items-start" colspan="2">
                                                         <span id="tts-reason-{{ loop.index }}-{{ market.id }}">{{ market.reason }}</span>
-                                                        <button onclick="speakText('tts-reason-{{ loop.index }}-{{ market.id }}')" class="btn btn-sm btn-outline-secondary ms-2 btn-speaker"><i class="bi-chevron-down"></i></button>
+                                                        <button onclick="speakText('tts-reason-{{ loop.index }}-{{ market.id }}')" class="btn btn-sm btn-outline-secondary ms-2 btn-speaker"><i class="bi bi-volume-up"></i></button>
                                                     </td>
 
                                                 </tr>

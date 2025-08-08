@@ -23,7 +23,7 @@
             <label for="summary-selector" class="form-label">Saved Summaries:</label>
             <select id="summary-selector" class="form-select w-auto d-inline-block">
                 {% for summary in summaries %}
-                    <option value="{{ summary.id }}" {% if summary.id == selected_summary_id %}selected{% endif %}>
+                    <option class="timeago" datetime="{{ summary.createdAt|date('c') }}" value="{{ summary.id }}" {% if summary.id == selected_summary_id %}selected{% endif %}>
                         {{ summary.createdAt|date('Y-m-d H:i') }}
                     </option>
                 {% endfor %}
@@ -137,6 +137,10 @@
         }
 
         $(document).ready(function () {
+
+
+                timeago.render(document.querySelectorAll('.timeago'));
+
             // loadMarketSummary();
 
             $('#refresh-summary').click(function () {
