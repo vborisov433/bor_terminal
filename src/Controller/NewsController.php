@@ -148,7 +148,7 @@ final class NewsController extends AbstractController
 
     public function get_all_news(NewsItemRepository $repo)
     {
-        $LIMIT_ARTICLES = 5;
+        $LIMIT_ARTICLES = 25;
 
         $newsItems = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
@@ -162,7 +162,7 @@ final class NewsController extends AbstractController
         $newsItems = array_slice($newsItems, 0, $LIMIT_ARTICLES);
 
 
-        $data = array_map(fn($i)=>implode(',',[
+        $data = array_map(fn($i)=>implode('|',[
 //            $i->getId(),
             $i->getTitle(),
 //            $i->getLink(),
@@ -178,14 +178,13 @@ final class NewsController extends AbstractController
 //            $info?$info->getEconomyImpact():'',
             implode(',',$i->getArticleInfo()->getMacroKeywordHeatmap()),
 //            $info?$info->getSummary():'',
-            $i->getArticleInfo()?->getSummary(),
+//            $i->getArticleInfo()?->getSummary(),
             $i->marketAnalysesToString()
 //            implode(',', array_map(fn($ma) => $ma->getMarket().' '.$ma->getSentiment(), $i->getMarketAnalyses()->toArray()))
 
         ]),$newsItems);
 
 //        dd($data[0]);
-//        dd(strlen($data));
 //        dd(json_encode($data[0]));
 
 
@@ -245,7 +244,6 @@ final class NewsController extends AbstractController
         $_question =preg_replace('/\s+/', ' ', trim($_question));
 
 //        dd(strlen($_question));
-
 //        dd($_question);
 
         $question = [
