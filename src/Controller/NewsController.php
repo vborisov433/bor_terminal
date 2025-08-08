@@ -80,7 +80,7 @@ final class NewsController extends AbstractController
             ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
             ->andWhere('a.newsSurpriseIndex > 4')
             ->orderBy('n.id', 'DESC')
-            ->setMaxResults(45)
+            ->setMaxResults(20)
             ->getQuery()
             ->getResult();
 
@@ -90,7 +90,7 @@ final class NewsController extends AbstractController
             return [
 //                'id' => $item->getId(),
 //                'title' => $item->getTitle(),
-                'read' => $item->getLink(),
+                'news' => $item->getLink(),
 //                'date' => $item->getDate()?->format('Y-m-d'),
 //                'gptAnalysis' => $item->getGptAnalysis(),
 //                'analyzed' => $item->isAnalyzed(),
@@ -104,7 +104,7 @@ final class NewsController extends AbstractController
 ////                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
 ////                    'summary' => $item->getArticleInfo()->getSummary(),
 //                ] : null,
-                'marketAnalyses' => array_map(function ($ma) {
+                'analyses' => implode(',',array_map(function ($ma) {
                     return $ma->getMarket() .' '. $ma->getSentiment();
 //                    return [
 ////                        'market' => $ma->getMarket(),
@@ -114,13 +114,16 @@ final class NewsController extends AbstractController
 ////                        'keywords' => $ma->getKeywords(),
 ////                        'categories' => $ma->getCategories(),
 //                    ];
-                }, $item->getMarketAnalyses()->toArray()),
+                }, $item->getMarketAnalyses()->toArray())),
             ];
         }, $newsItems);
 
 //        dd($data[0]);
 //        dd(count($data));
 //        dd(json_encode($data[0]));
+
+
+//        dd($data);
 
         return $data;
     }
@@ -151,7 +154,6 @@ final class NewsController extends AbstractController
         ]);
     }
 
-
     #[Route('/api/market-summary', name: 'api_market_summary_json', methods: ['GET'])]
     public function marketSummaryJson(
         NewsItemRepository $repo,
@@ -161,12 +163,18 @@ final class NewsController extends AbstractController
         $start = microtime(true);
 
         $_question = json_encode($this->get_all_news($repo)) .
-            'style for mobile container-fluid p-1 ,use bootstrap 5, icons, jquery imported, return 1 line,no whitespace html string only,use less than 4000 chars
-                 use table-responsive, with headers: Market-Direction,Quick Summary
-                 given the information show summary
-                 use table-responsive add future positive and negative events
-                explain what to look for in the markets with bullets
+            'response Total characters < 5000,
+            read all news here, analyze them, 
+            in card what to watch in the markets,
+            in card list overall short summary
+            list all markets in table format,
+            with columns: market&sentiment, magnitude 0-10, reason
+            add label for total characters for this response,
+            return html string only in one line no whitespace, use bootstrap5,container-fluid p-1
                 ';
+//        with columns: market&sentiment, magnitude 0-10, reason and td colspan=3 for future Positive,Negative Events
+//        in card list overal short summary
+//            in card What To Watch in the markets
 
         $_question =preg_replace('/\s+/', ' ', trim($_question));
 
@@ -204,15 +212,6 @@ final class NewsController extends AbstractController
 
 //                dump($html);
 
-                libxml_use_internal_errors(true);
-                $doc = new DOMDocument();
-                $isValid = $doc->loadHTML('<?xml encoding="utf-8" ?>' . $html);
-                $errors = libxml_get_errors();
-                libxml_clear_errors();
-
-                if (!$isValid || !empty($errors)) {
-                    throw new \Exception('Invalid HTML \n' .$html );
-                }
 
                 $summary = new MarketSummary();
                 $summary->setHtmlResult($html);
