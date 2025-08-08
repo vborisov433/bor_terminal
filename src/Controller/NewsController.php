@@ -73,6 +73,57 @@ final class NewsController extends AbstractController
         ]);
     }
 
+    #[Route('/news/all', name: 'app_news_all', methods: ['GET'])]
+    public function getAllNews(Request $request, NewsItemRepository $repo): JsonResponse
+    {
+        $limit = (int) $request->query->get('limit', 20); // default to 20 if not provided
+
+        $newsItems = $repo->createQueryBuilder('n')
+            ->leftJoin('n.articleInfo', 'a')->addSelect('a')
+            ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
+            ->andWhere('a.newsSurpriseIndex > 4')
+            ->orderBy('n.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        $data = array_map(function ($item) {
+            /** @var \App\Entity\NewsItem $item */
+            // return read from #link
+            return [
+                'id' => $item->getId(),
+                'title' => $item->getTitle(),
+                'news' => $item->getLink(),
+                'date' => $item->getDate()?->format('Y-m-d'),
+                'gptAnalysis' => $item->getGptAnalysis(),
+                'analyzed' => $item->isAnalyzed(),
+                'completed' => $item->isCompleted(),
+                'createdAt' => $item->getCreatedAt()?->format('Y-m-d H:i:s'),
+                'articleInfo' => $item->getArticleInfo() ? [
+                    'hasMarketImpact' => $item->getArticleInfo()->hasMarketImpact(),
+                    'titleHeadline' => $item->getArticleInfo()->getTitleHeadline(),
+                    'newsSurpriseIndex' => $item->getArticleInfo()->getNewsSurpriseIndex(),
+                    'economyImpact' => $item->getArticleInfo()->getEconomyImpact(),
+                    'macroKeywordHeatmap' => $item->getArticleInfo()->getMacroKeywordHeatmap(),
+                    'summary' => $item->getArticleInfo()->getSummary(),
+                ] : null,
+                'analyses' => implode(',',array_map(function ($ma) {
+                    return $ma->getMarket() .' '. $ma->getSentiment();
+                    return [
+                        'market' => $ma->getMarket(),
+                        'sentiment' => $ma->getSentiment(),
+                        'magnitude' => $ma->getMagnitude(),
+                        'reason' => $ma->getReason(),
+                        'keywords' => $ma->getKeywords(),
+                        'categories' => $ma->getCategories(),
+                    ];
+                }, $item->getMarketAnalyses()->toArray())),
+            ];
+        }, $newsItems);
+
+        return new JsonResponse($data);
+    }
+
     public function get_all_news(NewsItemRepository $repo)
     {
         $newsItems = $repo->createQueryBuilder('n')
