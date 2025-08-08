@@ -148,7 +148,7 @@ final class NewsController extends AbstractController
 
     public function get_all_news(NewsItemRepository $repo)
     {
-        $LIMIT_ARTICLES = 21;
+        $LIMIT_ARTICLES = 18;
 
         $newsItems = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
