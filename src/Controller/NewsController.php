@@ -148,7 +148,7 @@ final class NewsController extends AbstractController
 
     public function get_all_news(NewsItemRepository $repo)
     {
-        $LIMIT_ARTICLES = 13;
+        $LIMIT_ARTICLES = 21;
 
         $newsItems = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
@@ -179,7 +179,7 @@ final class NewsController extends AbstractController
             implode(',', array_map(fn($item) => is_scalar($item) ? $item : json_encode($item), $i->getArticleInfo()?->getMacroKeywordHeatmap() ?? [])),
 //            $info?$info->getSummary():'',
 //            $i->getArticleInfo()?->getSummary(),
-            $i->marketAnalysesToString()
+//            $i->marketAnalysesToString()
 //            implode(',', array_map(fn($ma) => $ma->getMarket().' '.$ma->getSentiment(), $i->getMarketAnalyses()->toArray()))
 
         ]),$newsItems);
@@ -246,8 +246,8 @@ final class NewsController extends AbstractController
             read all news here, analyze them, 
             in card what to watch in the markets,
             in card list overall short summary
-            list all markets,table format,columns: market&sentiment /use icons/, magnitude 0-10, reason
-            list all markets,card format,columns: market, what can be bullish,bearish future news,use icons
+            list dow,audjpy,audusd,dxy,fed interest rate,table format,columns: market&sentiment /use icons/, magnitude 0-10, reason
+            list markets,card format,columns: market, what can be bullish,bearish future news,use icons
             add label for total characters for this response,
             return html string only in one line no whitespace, use bootstrap5,container-fluid p-1
                 ';
