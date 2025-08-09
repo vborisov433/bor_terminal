@@ -23,15 +23,33 @@
             </div>
         </div>
 
-        <div class="mb-3">
-            <label for="summary-selector" class="form-label">Saved Summaries:</label>
-            <select id="summary-selector" class="form-select w-auto d-inline-block">
-                {% for summary in summaries %}
-                    <option class="timeago" datetime="{{ summary.createdAt|date('c') }}" value="{{ summary.id }}" {% if summary.id == selected_summary_id %}selected{% endif %}>
-                        {{ summary.createdAt|date('Y-m-d H:i') }}
-                    </option>
-                {% endfor %}
-            </select>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <label for="summary-selector" class="form-label mb-0">Saved Summaries:</label>
+                <select id="summary-selector" class="form-select w-auto d-inline-block">
+                    {% for summary in summaries %}
+                        <option class="timeago"
+                                datetime="{{ summary.createdAt|date('c') }}"
+                                value="{{ summary.id }}"
+                                {% if summary.id == selected_summary_id %}selected{% endif %}>
+                            {{ summary.createdAt|date('Y-m-d H:i') }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button id="toggle-template-form" type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil-square"></i> Edit Prompt
+            </button>
+        </div>
+
+        <div id="template-form-container" style="display:none;">
+            <form method="post">
+                <textarea name="template" class="form-control" rows="8">{{ prompt_template.template }}</textarea>
+                <button type="submit" class="btn btn-primary mt-2">
+                    <i class="bi bi-save"></i> Save Changes
+                </button>
+            </form>
+            <hr/>
         </div>
 
 {#        <div id="summary-container" class="d-none">#}
@@ -141,7 +159,9 @@
         }
 
         $(document).ready(function () {
-
+            $('#toggle-template-form').on('click', function () {
+                $('#template-form-container').slideToggle();
+            });
 
                 timeago.render(document.querySelectorAll('.timeago'));
 

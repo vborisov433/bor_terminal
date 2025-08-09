@@ -3,8 +3,10 @@
 namespace App\Controller;
 
 use App\Entity\MarketSummary;
+use App\Entity\PromptTemplate;
 use App\Repository\MarketSummaryRepository;
 use App\Repository\NewsItemRepository;
+use App\Repository\PromptTemplateRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use DOMDocument;
 use Knp\Component\Pager\PaginatorInterface;
@@ -204,12 +206,37 @@ final class NewsController extends AbstractController
 
         return $data;
     }
-    #[Route('/market-summary', name: 'api_news_market_summary', methods: ['GET'])]
+
+    #[Route('/market-summary', name: 'api_news_market_summary', methods: ['GET','POST'])]
     public function marketSummary(
         Request $request,
-        MarketSummaryRepository $summaryRepo
+        MarketSummaryRepository $summaryRepo,
+        PromptTemplateRepository $promptRepo,
+        EntityManagerInterface $em,
+
     ): Response {
         $id = $request->query->get('id');
+
+        $promptTemplate = $promptRepo->findOneBy([], ['id' => 'DESC']);
+
+        if (!$promptTemplate?->getId()) {
+            $promptTemplate = new PromptTemplate();
+            $promptTemplate->setTemplate('Default template text here...');
+            $em->persist($promptTemplate);
+            $em->flush();
+        }
+
+        if ($request->isMethod('POST')) {
+            $newTemplate = $request->request->get('template');
+
+            if ($newTemplate !== null && $newTemplate !== $promptTemplate->getTemplate()) {
+                $newPromptTemplate = new PromptTemplate();
+                $newPromptTemplate->setTemplate($newTemplate);
+                $em->persist($newPromptTemplate);
+                $em->flush();
+                $promptTemplate = $newPromptTemplate; // update to latest
+            }
+        }
 
         $summaries = $summaryRepo->findBy([], ['createdAt' => 'DESC']);
 
@@ -228,6 +255,7 @@ final class NewsController extends AbstractController
             'selected_summary_id' => $selectedSummary?->getId(),
             'selected_summary_date' => $selectedSummary?->getCreatedAt(),
             'time_loaded' => $selectedSummary?->getTimeLoaded(),
+            'prompt_template' => $promptTemplate
         ]);
     }
 
@@ -249,21 +277,24 @@ final class NewsController extends AbstractController
     public function marketSummaryJson(
         NewsItemRepository $repo,
         HttpClientInterface $http,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        PromptTemplateRepository $promptRepo
     ): JsonResponse {
         $start = microtime(true);
 
-        $_question = json_encode($this->get_all_news($repo)) .
-            '
-            read all news here, analyze them, 
-            markets: dow audjpy audusd dxy fed interest rate
-            1. use card list overall short summary with bullets,
-            2. table format with list for each market with columns: "market&sentiment icon direction" "magnitude rate 0-10"  "reason",
-            3. use card for each market from above what can be bullish or bearish in future
-            4. create card with what news or events to watch in the markets,
-            5. div label for total characters for this response,
-            return html string only in one line no whitespace use "bootstrap 5" icons,colors "container-fluid p-1" "card mb-2"
-                ';
+        $promptTemplate = $promptRepo->findOneBy([], ['id' => 'DESC']);
+
+        $_question = json_encode($this->get_all_news($repo)) .' '. $promptTemplate->getTemplate();
+//            '
+//            read all news here, analyze them,
+//            markets: dow audjpy audusd dxy fed interest rate
+//            1. use card list overall short summary with bullets,
+//            2. table format with list for each market with columns: "market&sentiment icon direction" "magnitude rate 0-10"  "reason",
+//            3. use card for each market from above what can be bullish or bearish in future
+//            4. create card with what news or events to watch in the markets,
+//            5. div label for total characters for this response,
+//            return html string only in one line no whitespace use "bootstrap 5" icons,colors "container-fluid p-1" "card mb-2"
+//                ';
 //        with columns: market&sentiment, magnitude 0-10, reason and td colspan=3 for future Positive,Negative Events
 //        in card list overal short summary
 //            in card What To Watch in the markets
