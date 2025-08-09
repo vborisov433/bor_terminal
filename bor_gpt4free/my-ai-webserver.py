@@ -57,8 +57,11 @@ def ask_gpt(question):
 #         web_search=False
 #     )
 
+#         model="gpt-4.1-mini",
+#         provider="PollinationsAI"
+
     response = client.chat.completions.create(
-        model="gpt-4.1",  # Specify the model as gpt-4.1
+        model="gpt-4o",
         messages=[{"role": "user", "content": question}],
         web_search=False,
         provider="PollinationsAI"  # Explicitly use the Polinations provider
