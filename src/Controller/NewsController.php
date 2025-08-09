@@ -148,7 +148,7 @@ final class NewsController extends AbstractController
 
     public function get_all_news(NewsItemRepository $repo)
     {
-        $LIMIT_ARTICLES = 21;
+        $LIMIT_ARTICLES = 50;
 
         $newsItems = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
@@ -161,28 +161,40 @@ final class NewsController extends AbstractController
 
         $newsItems = array_slice($newsItems, 0, $LIMIT_ARTICLES);
 
-
+/*
         $data = array_map(fn($i)=>implode('|',[
 //            $i->getId(),
             $i->getTitle(),
-//            $i->getLink(),
+            $i->getLink(),
 //            $i->getDate()?->format('Y-m-d'),
 //            $i->getGptAnalysis(),
 //            $i->isAnalyzed(),
 //            $i->isCompleted(),
 //            $i->getCreatedAt()?->format('Y-m-d H:i:s'),
-//            $i->getArticleInfo()?->toString(),
+            $i->getArticleInfo()?->toString(),
 //            $info?$info->hasMarketImpact():'',
 //            $info?$info->getTitleHeadline():'',
 //            $info?$info->getNewsSurpriseIndex():'',
 //            $info?$info->getEconomyImpact():'',
             implode(',', array_map(fn($item) => is_scalar($item) ? $item : json_encode($item), $i->getArticleInfo()?->getMacroKeywordHeatmap() ?? [])),
-//            $info?$info->getSummary():'',
-//            $i->getArticleInfo()?->getSummary(),
-//            $i->marketAnalysesToString()
+            $i->getArticleInfo()?->getSummary(),
+            $i->marketAnalysesToString()
 //            implode(',', array_map(fn($ma) => $ma->getMarket().' '.$ma->getSentiment(), $i->getMarketAnalyses()->toArray()))
 
         ]),$newsItems);
+*/
+
+        $data = array_map(function($i) {
+            return [
+                'title'        => $i->getTitle(),
+                'link'         => $i->getLink(),
+                'article_info' => $i->getArticleInfo()?->toString(),
+                'macro_heatmap'=> $i->getArticleInfo()
+                        ?->getMacroKeywordHeatmap() ?? [],
+                'summary'      => $i->getArticleInfo()?->getSummary(),
+                'market_analysis' => $i->marketAnalysesToString()
+            ];
+        }, $newsItems);
 
 //        dd($data[0]);
 //        dd(json_encode($data[0]));
@@ -242,18 +254,20 @@ final class NewsController extends AbstractController
         $start = microtime(true);
 
         $_question = json_encode($this->get_all_news($repo)) .
-            'response Total characters < 5000,
+            '
             read all news here, analyze them, 
-            in card what to watch in the markets,
-            in card list overall short summary
-            list dow,audjpy,audusd,dxy,fed interest rate,table format,columns: market&sentiment /use icons/, magnitude 0-10, reason
-            list markets,card format,columns: market, what can be bullish,bearish future news,use icons
-            add label for total characters for this response,
-            return html string only in one line no whitespace, use bootstrap5,container-fluid p-1
+            markets: dow audjpy audusd dxy fed interest rate
+            1. use card list overall short summary with bullets,
+            2. table format with list for each market with columns: "market&sentiment icon direction" "magnitude rate 0-10"  "reason",
+            3. use card for each market from above what can be bullish or bearish in future
+            4. create card with what news or events to watch in the markets,
+            5. div label for total characters for this response,
+            return html string only in one line no whitespace use "bootstrap 5" icons,colors "container-fluid p-1" "card mb-2"
                 ';
 //        with columns: market&sentiment, magnitude 0-10, reason and td colspan=3 for future Positive,Negative Events
 //        in card list overal short summary
 //            in card What To Watch in the markets
+        //response Total characters < 5000,
 
         $_question =preg_replace('/\s+/', ' ', trim($_question));
 
