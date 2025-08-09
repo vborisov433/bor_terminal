@@ -6,7 +6,7 @@
     <style>
         #template_textarea {
             display: none;
-            height: 55vh;
+            height: 60vh;
             display: flex;
             flex-direction: column;
         }
@@ -50,11 +50,12 @@
         <div id="template-form-container" style="display:none;">
             <form method="post">
                 <textarea name="template" id="template_textarea" class="form-control" rows="8">{{ prompt_template.template }}</textarea>
-                <button type="submit" class="btn btn-primary mt-2">
-                    <i class="bi bi-save"></i> Save Changes
-                </button>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary mt-2">
+                        <i class="bi bi-save" id="save-icon"></i> Save
+                    </button>
+                </div>
             </form>
-            <hr/>
         </div>
 
 {#        <div id="summary-container" class="d-none">#}
@@ -165,6 +166,7 @@
 
         $(document).ready(function () {
             $('#toggle-template-form').on('click', function () {
+                $('.summary-container').toggle()
                 $('#template-form-container').slideToggle();
             });
 
