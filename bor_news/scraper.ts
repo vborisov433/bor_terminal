@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+let browser: puppeteer.Browser;
 
 export interface NewsItem {
     title: string;
@@ -11,8 +12,15 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function getBrowser() {
+    if (!browser) {
+        browser = await puppeteer.launch({ headless: true });
+    }
+    return browser;
+}
+
 export async function scrapeLatestNews(): Promise<NewsItem[]> {
-    const browser = await puppeteer.launch({ headless: true });
+    browser = await getBrowser()
     const page = await browser.newPage();
 
     await page.setUserAgent(
@@ -21,7 +29,7 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
     await page.setViewport({ width: 1920, height: 1080, isMobile: false });
 
     await sleep(800 + Math.floor(Math.random() * 1200));
-    await page.goto('https://www.cnbc.com/', { waitUntil: 'domcontentloaded' });
+    await page.goto('https://www.cnbc.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
     await sleep(1000 + Math.floor(Math.random() * 1600));
 
     await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.6.0.min.js' });
@@ -95,6 +103,6 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
         }));
     });
 
-    await browser.close();
+    // await browser.close();
     return news;
 }

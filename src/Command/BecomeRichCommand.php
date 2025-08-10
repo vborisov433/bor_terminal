@@ -8,9 +8,11 @@ use App\Entity\NewsItem;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -83,7 +85,7 @@ class BecomeRichCommand extends Command
         // 2. Analyze Section (only newly inserted items)
         if (empty($newItems)) {
             $io->success('No new news items to analyze.');
-            return self::SUCCESS;
+//            return self::SUCCESS;
         }
         $io->section('Analyzing news with GPT...');
         $io->progressStart(count($newItems));
@@ -158,7 +160,34 @@ TEXT;
         $io->progressFinish();
         $io->success("Analyzed $analyzed new news items.");
 
+        $this->runAnalyzeGpt($io);
+
         return self::SUCCESS;
+    }
+
+    public function runAnalyzeGpt(SymfonyStyle $io): void
+    {
+        $application = $this->getApplication();
+        if ($application) {
+            $application->setAutoExit(false); // Prevents Symfony from shutting down the PHP process
+
+            $input = new ArrayInput([
+                'command' => 'app:analyze-gpt', // the name from #[AsCommand()]
+                // add any arguments or options if needed:
+                // '--optionName' => 'value'
+            ]);
+
+            $output = new BufferedOutput();
+            $returnCode = $application->run($input, $output);
+
+            $io->text($output->fetch());
+
+            if ($returnCode === 0) {
+                $io->success('Analyze GPT command completed successfully.');
+            } else {
+                $io->error('Analyze GPT command failed.');
+            }
+        }
     }
 
     private function completeNewsItem(NewsItem $newsItem, SymfonyStyle $io): void
