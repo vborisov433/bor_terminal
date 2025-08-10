@@ -34,7 +34,14 @@ class AnalyzeGptCommand extends Command
 
         $repo = $this->em->getRepository(NewsItem::class);
         // Only process unanalyzed items
-        $newsItems = $repo->findBy(['analyzed' => false]);
+//        $newsItems = $repo->findBy(['analyzed' => false]);
+
+        $newsItems = $repo->findBy(
+            ['analyzed' => false],
+            ['id' => 'DESC'],
+            5
+        );
+
         $total = count($newsItems);
         if ($total === 0) {
             $io->success('No new news items found to analyze.');
@@ -74,7 +81,7 @@ for each market in format:
 }
 TEXT;
             try {
-                $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt', [
+                $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt?model=gpt-4.1', [
                     'json' => ['question' => $question],
                 ]);
                 $data = $response->toArray();
@@ -84,7 +91,7 @@ TEXT;
                 $start = strpos($answer, '{');
                 $end = strrpos($answer, '}');
                 if ($start === false || $end === false || $end <= $start) {
-                    throw new \RuntimeException("Could not extract JSON from answer for link: " . $newsItem->getLink());
+                    throw new \RuntimeException("Could not extract JSON from answer for link: " . json_encode($answer));
                 }
                 $jsonString = substr($answer, $start, $end - $start + 1);
                 $json = json_decode($jsonString, true);

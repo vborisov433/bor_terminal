@@ -50,25 +50,6 @@ HTML_TEMPLATE = '''
 </html>
 '''
 
-def ask_gpt(question):
-#     response = client.chat.completions.create(
-#         model="gpt-4o",
-#         messages=[{"role": "user", "content": question}],
-#         web_search=False
-#     )
-
-#         model="gpt-4.1-mini",
-#         provider="PollinationsAI"
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": question}],
-        web_search=False,
-        provider="PollinationsAI"  # Explicitly use the Polinations provider
-    )
-
-    return response.choices[0].message.content
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     answer = ""
@@ -99,29 +80,36 @@ logging.basicConfig(
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask_gpt():
     if not request.is_json:
-#         logging.warning("Request is not JSON")
         return jsonify({"error": "Content-Type must be application/json"}), 400
+
+    # Get model from query parameter, fallback to default
+    model = request.args.get("model", "gpt-4o")
 
     data = request.get_json()
     question = data.get("question", "")
+
     if not question:
-#         logging.warning("Missing 'question' in the request body.")
         return jsonify({"error": "Missing 'question' in the request body."}), 400
 
-#     logging.info(f"Received question: {question}")
+    def ask_gpt_dynamic(question, model):
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": question}],
+            web_search=False,
+            provider="PollinationsAI"  # still fixed here
+        )
+        return response.choices[0].message.content
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(ask_gpt, question)
+        future = executor.submit(ask_gpt_dynamic, question, model)
         try:
             answer = future.result(timeout=120)
-#             logging.info(f"Generated answer: {answer}")
-            return jsonify({"answer": answer})
+            return jsonify({"answer": answer, "model": model})
         except concurrent.futures.TimeoutError:
-#             logging.error("Timeout while processing question.")
-            return jsonify({"answer": "Request timed out. Try again later."}), 504
+            return jsonify({"answer": "Request timed out. Try again later.", "model": model}), 504
         except Exception as e:
-            logging.exception("Internal error during GPT request.")
-            return jsonify({"answer": f"Internal error: {str(e)}"}), 500
+            return jsonify({"answer": f"Internal error: {str(e)}", "model": model}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
