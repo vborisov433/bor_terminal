@@ -6,6 +6,7 @@ use App\Entity\MarketAnalysis;
 use App\Entity\NewsArticleInfo;
 use App\Entity\NewsItem;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -33,7 +34,8 @@ class BecomeRichCommand extends Command
 
     public function __construct(
         private HttpClientInterface $httpClient,
-        private EntityManagerInterface $em
+        private EntityManagerInterface $em,
+        private ManagerRegistry $doctrine
     ) {
         parent::__construct();
     }
@@ -154,7 +156,13 @@ TEXT;
 
                 $io->note('Analyzed: ' . $newsItem->getTitle());
                 $analyzed++;
-            } catch (\Throwable $e) {
+            }
+            catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
+                $this->em->clear(); // optional: clear UoW to avoid memory leaks
+                $this->em = $this->doctrine->resetManager(); // reopen EntityManager
+                continue;
+            }
+            catch (\Throwable $e) {
                 $io->error('Failed: ' . $newsItem->getTitle() . ' - ' . $e->getMessage());
             }
             $io->progressAdvance();
