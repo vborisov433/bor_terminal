@@ -39,7 +39,7 @@ class AnalyzeGptCommand extends Command
         $newsItems = $repo->findBy(
             ['analyzed' => false],
             ['id' => 'DESC'],
-            5
+            100, // Limit to 100 items
         );
 
         $total = count($newsItems);
