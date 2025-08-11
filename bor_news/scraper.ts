@@ -1,6 +1,8 @@
 import puppeteer from 'puppeteer';
 
 let browser: puppeteer.Browser;
+import fs from 'fs';
+import fetch from 'node-fetch';
 
 export interface NewsItem {
     title: string;
@@ -15,10 +17,115 @@ function sleep(ms: number) {
 
 async function getBrowser() {
     if (!browser) {
-        browser = await puppeteer.launch({headless: true});
+        browser = await puppeteer.launch(
+            {
+                headless: false,
+                slowMo: 3,
+            }
+        );
     }
     return browser;
 }
+
+export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    try {
+        await page.setUserAgent(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        );
+        await page.setViewport({width: 1920, height: 1080, isMobile: false});
+
+        await page.goto('https://finance.yahoo.com/', {
+            waitUntil: 'domcontentloaded',
+            timeout: 15000,
+        });
+
+        await page.setViewport({width: 1219, height: 665});
+
+        // Scroll a bit to trigger lazy loading or scripts if needed
+        await page.evaluate(() => window.scrollBy(0, 336));
+        await page.evaluate(() => window.scrollBy(0, 0));
+
+        try {
+            await page.waitForSelector('.accept-all', {timeout: 3000}); // wait up to 3s
+            await Promise.all([
+                page.click('.accept-all'),
+                page.waitForNavigation({waitUntil: 'domcontentloaded', timeout: 55000})
+            ]);
+        } catch {
+            console.log('No consent dialog found, continuing...');
+        }
+
+        const links: { title: string; link: string; index: number }[] = await page.evaluate(() => {
+            const nodes = document.querySelectorAll('.subtle-link');
+            let ind = 100;
+            const items: { title: string; link: string; index: number }[] = [];
+
+            nodes.forEach(link => {
+                const title = link.textContent?.trim() || '';
+                const href = link.getAttribute('href') || '';
+
+                if (title && /.+\/news\/.+/i.test(href)) {
+                    items.push({
+                        title,
+                        link: href.startsWith('http') ? href : `https://finance.yahoo.com${href}`,
+                        index: ind++
+                    });
+                }
+            });
+
+            return items;
+        });
+
+        // console.log(links)
+
+        const news: NewsItem[] = [];
+
+        for (const item of links) {
+            try {
+                const response = await fetch('http://15.0.1.50/api/news/check', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({link: item.link})
+                });
+
+                const result:any = await response.json();
+
+                if (result.exists) {
+                    console.log(`Skipping ${item.link} — already exists in DB`);
+                    continue;
+                }
+
+                await page.goto(item.link, {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 15000
+                });
+
+                const date = await page.evaluate(() => {
+                    const dateElement = document.querySelector('time.byline-attr-meta-time');
+                    return dateElement ? dateElement.getAttribute('datetime') || '' : '';
+                });
+
+                news.push({
+                    ...item,
+                    date
+                });
+            } catch (err) {
+                console.error(`Failed to scrape ${item.link}:`, err);
+            }
+        }
+
+        return news;
+
+    } catch (e) {
+        console.error('Error while scrapeYahooFinanceNews:', e);
+        return [];
+    } finally {
+        await page.close();
+    }
+}
+
 
 export async function scrapeLatestNews(): Promise<NewsItem[]> {
     browser = await getBrowser()
