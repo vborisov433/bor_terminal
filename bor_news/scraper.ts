@@ -20,7 +20,7 @@ async function getBrowser() {
         browser = await puppeteer.launch(
             {
                 headless: false,
-                slowMo: 3,
+                // slowMo: 3,
             }
         );
     }
