@@ -46,7 +46,10 @@ class BecomeRichCommand extends Command
 
         // 1. Import Section
         $io->section('Fetching latest news...');
-        $response = $this->httpClient->request('GET', 'http://localhost:3000/api/latest-news');
+        $response = $this->httpClient->request('GET', 'http://localhost:3000/api/latest-news',
+             [
+                'timeout' => 900
+            ]);
         $newsArray = $response->toArray();
 
         usort($newsArray, fn($a, $b) => $b['index'] <=> $a['index']);
