@@ -269,6 +269,14 @@
                     $(this).html('»');
                 }
             });
+
+            $(document).on('keydown', function(e) {
+                if (e.key.toLowerCase() === 'r') {
+                    // Prevent browser's default refresh (Ctrl+R/F5)
+                    e.preventDefault();
+                    location.href = window.location.pathname + window.location.search;
+                }
+            });
         });
     </script>
 {% endblock %}
