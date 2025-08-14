@@ -46,14 +46,8 @@ final class NewsController extends AbstractController
                 ->setParameter('impact_min', (int)$impactMin);
         }
 
-        $totalNewsCount = (clone $qb)
-            ->select('COUNT(n.id)')
-            ->resetDQLPart('orderBy')
-            ->getQuery()
-            ->getSingleScalarResult();
-
         $pagination = $paginator->paginate(
-            $qb, // query NOT ->getQuery()
+            $qb,
             $page,
             12 // items per page
         );
@@ -69,7 +63,7 @@ final class NewsController extends AbstractController
             'pagination' => $pagination,
             'surprise_min' => $surpriseMin,
             'impact_min' => $impactMin,
-            'total_news_count' => $totalNewsCount,
+            'total_news_count' => $repo->countAll(),
             'first_news_date' => $firstNewsDate,
         ]);
     }

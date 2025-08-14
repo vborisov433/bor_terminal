@@ -16,6 +16,14 @@ class NewsItemRepository extends ServiceEntityRepository
         parent::__construct($registry, NewsItem::class);
     }
 
+    public function countAll(): int
+    {
+        return (int) $this->createQueryBuilder('n')
+            ->select('COUNT(n.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     //    /**
     //     * @return NewsItem[] Returns an array of NewsItem objects
     //     */
