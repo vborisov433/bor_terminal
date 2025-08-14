@@ -46,16 +46,31 @@ final class NewsController extends AbstractController
                 ->setParameter('impact_min', (int)$impactMin);
         }
 
+        $totalNewsCount = (clone $qb)
+            ->select('COUNT(n.id)')
+            ->resetDQLPart('orderBy')
+            ->getQuery()
+            ->getSingleScalarResult();
+
         $pagination = $paginator->paginate(
             $qb, // query NOT ->getQuery()
             $page,
             12 // items per page
         );
 
+        $firstNewsDate = $repo->createQueryBuilder('n')
+            ->select('n.createdAt')
+            ->orderBy('n.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getSingleScalarResult();
+
         return $this->render('news/index.html.twig', [
             'pagination' => $pagination,
             'surprise_min' => $surpriseMin,
             'impact_min' => $impactMin,
+            'total_news_count' => $totalNewsCount,
+            'first_news_date' => $firstNewsDate,
         ]);
     }
 
