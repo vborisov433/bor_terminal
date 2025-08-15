@@ -291,6 +291,10 @@
                     e.preventDefault();
                     location.href = window.location.pathname + window.location.search;
                 }
+                if (e.key.toLowerCase() === 's') {
+                    e.preventDefault();
+                    window.location.href = "{{ path('api_news_market_summary') }}";
+                }
             });
         });
     </script>

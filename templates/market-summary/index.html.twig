@@ -229,6 +229,13 @@
             });
         });
 
+        $(document).on('keydown', function (e) {
+            if (e.key.toLowerCase() === 'r') {
+                e.preventDefault();
+                location.href = window.location.pathname + window.location.search;
+            }
+        });
+
     </script>
 
 {% endblock %}
