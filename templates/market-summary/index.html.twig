@@ -230,7 +230,7 @@
         });
 
         $(document).on('keydown', function (e) {
-            if (e.key.toLowerCase() === 'r') {
+            if (e.key.toLowerCase() === 'r' && e.target.tagName.toLowerCase() !== 'textarea') {
                 e.preventDefault();
                 location.href = window.location.pathname + window.location.search;
             }
