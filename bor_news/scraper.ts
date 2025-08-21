@@ -102,7 +102,7 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                         ? item.link.substring(0, 75) + '…'
                         : item.link;
 
-                    console.log(`[X in DB] ${shortLink}`);
+                    console.log(`[in.db] ${shortLink}`);
                     continue;
                 }
 
