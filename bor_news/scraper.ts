@@ -1,10 +1,11 @@
-import puppeteer from 'puppeteer';
+import puppeteer, {Browser} from 'puppeteer';
 
-let browser: puppeteer.Browser;
 import fs from 'fs';
 import fetch from 'node-fetch';
 
-export interface NewsItem {
+let browser: Browser | null = null;
+
+export interface NewsItem {x
     title: string;
     link: string;
     date: string;
@@ -15,7 +16,7 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function getBrowser() {
+export async function getBrowser(): Promise<Browser> {
     try {
         if (!browser) {
             browser = await puppeteer.launch({
@@ -24,10 +25,10 @@ async function getBrowser() {
             });
         }
         return browser;
-    } catch (err) {
-        console.error("Puppeteer launch failed:", err.message);
+    } catch (err: any) {
+        console.error("Puppeteer launch failed:", err?.message || err);
         // Retry once after short delay
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         return getBrowser();
     }
 }
