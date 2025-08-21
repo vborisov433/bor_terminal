@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 
 let browser: Browser | null = null;
 
-export interface NewsItem {x
+export interface NewsItem {
     title: string;
     link: string;
     date: string;
