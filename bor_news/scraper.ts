@@ -98,11 +98,21 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                 const result:any = await response.json();
 
                 if (result.exists) {
-                    const shortLink = item.link.length > 75
-                        ? item.link.substring(0, 75) + '…'
-                        : item.link;
+                    const cleanLink = item.link.replace(/^https?:\/\//, '');
+                    const shortLink = cleanLink.length > 71
+                        ? cleanLink.substring(0, 71) + '…'
+                        : cleanLink;
 
-                    console.log(`[in.db] ${shortLink}`);
+                    // Sofia local time HH:MM
+                    const now = new Date();
+                    const formattedTime = now.toLocaleTimeString("bg-BG", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                        timeZone: "Europe/Sofia"
+                    });
+
+                    console.log(`[${formattedTime}][in.db] ${shortLink}`);
                     continue;
                 }
 
