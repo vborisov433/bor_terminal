@@ -16,20 +16,20 @@ function sleep(ms: number) {
 }
 
 async function getBrowser() {
-    if (!browser) {
-        browser = await puppeteer.launch(
-            {
+    try {
+        if (!browser) {
+            browser = await puppeteer.launch({
                 headless: false,
-                slowMo: 1,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage'
-                ]
-            }
-        );
+                slowMo: 1
+            });
+        }
+        return browser;
+    } catch (err) {
+        console.error("Puppeteer launch failed:", err.message);
+        // Retry once after short delay
+        await new Promise(r => setTimeout(r, 3000));
+        return getBrowser();
     }
-    return browser;
 }
 
 export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
