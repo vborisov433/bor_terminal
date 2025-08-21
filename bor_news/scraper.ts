@@ -98,7 +98,11 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                 const result:any = await response.json();
 
                 if (result.exists) {
-                    console.log(`Skipping ${item.link} — already exists in DB`);
+                    const shortLink = item.link.length > 75
+                        ? item.link.substring(0, 75) + '…'
+                        : item.link;
+
+                    console.log(`[X in DB] ${shortLink}`);
                     continue;
                 }
 
