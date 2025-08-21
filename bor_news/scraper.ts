@@ -103,14 +103,10 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                         ? cleanLink.substring(0, 71) + '…'
                         : cleanLink;
 
-                    // Sofia local time HH:MM
                     const now = new Date();
-                    const formattedTime = now.toLocaleTimeString("bg-BG", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                        timeZone: "Europe/Sofia"
-                    });
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    const formattedTime = `${hours}:${minutes}`;
 
                     console.log(`[${formattedTime}][in.db] ${shortLink}`);
                     continue;
