@@ -18,6 +18,62 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Pro
 
 app.get('/api/latest-news', async (_req: Request, res: Response) => {
     if (isScraping) {
+        // Another request is already running, return quickly
+        return res.json([]);
+    }
+    isScraping = true;
+
+    try {
+        const news: NewsItem[] = await withTimeout(
+            scrapeLatestNews().catch(err => {
+                console.error('scrapeLatestNews failed:', err);
+                return [];
+            }),
+            60000, // 1 minute timeout
+            []
+        );
+
+        const yahooNews: NewsItem[] = await withTimeout(
+            scrapeYahooFinanceNews().catch(err => {
+                console.error('scrapeYahooFinanceNews failed:', err);
+                return [];
+            }),
+            120000, // 2 minutes timeout
+            []
+        );
+
+        const result = [...yahooNews, ...news];
+        return res.json(result);
+
+    } catch (error) {
+        console.error('Unexpected error in /api/latest-news:', error);
+        return res.status(500).json({
+            error: 'Failed to fetch news',
+            details: (error as Error).message,
+        });
+
+    } finally {
+        // Always release the lock
+        isScraping = false;
+    }
+});
+
+// Global guards to stop app from crashing
+process.on("unhandledRejection", (reason, p) => {
+    console.error("Unhandled Rejection:", reason);
+    isScraping = false; // release if something leaked
+});
+
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err);
+    isScraping = false; // release so next request still works
+});
+
+
+/*
+
+app.get('/api/latest-news', async (_req: Request, res: Response) => {
+    if (isScraping) {
         // If scraping is already in progress, return empty array
         return res.json([]);
     }
@@ -61,6 +117,9 @@ app.get('/api/latest-news', async (_req: Request, res: Response) => {
         isScraping = false; // release the flag
     }
 });
+
+*/
+
 
 app.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);
