@@ -5,8 +5,16 @@ import type { NewsItem } from './scraper.js';
 
 const app = express();
 const PORT = 3000;
-
 let isScraping = false;
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+    return Promise.race([
+        promise,
+        new Promise<T>((resolve) =>
+            setTimeout(() => resolve(fallback), ms)
+        ),
+    ]);
+}
 
 app.get('/api/latest-news', async (_req: Request, res: Response) => {
     if (isScraping) {
@@ -16,14 +24,33 @@ app.get('/api/latest-news', async (_req: Request, res: Response) => {
     isScraping = true;
 
     try {
-        const news: NewsItem[] = await scrapeLatestNews().catch(err => {
-            console.error('scrapeLatestNews failed:', err);
-            return [];
-        });
-        const yahooNews: NewsItem[] = await scrapeYahooFinanceNews().catch(err => {
-            console.error('scrapeYahooFinanceNews failed:', err);
-            return [];
-        });
+        // const news: NewsItem[] = await scrapeLatestNews().catch(err => {
+        //     console.error('scrapeLatestNews failed:', err);
+        //     return [];
+        // });
+        // const yahooNews: NewsItem[] = await scrapeYahooFinanceNews().catch(err => {
+        //     console.error('scrapeYahooFinanceNews failed:', err);
+        //     return [];
+        // });
+
+        const news: NewsItem[] = await withTimeout(
+            scrapeLatestNews().catch(err => {
+                console.error('scrapeLatestNews failed:', err);
+                return [];
+            }),
+            60000,
+            []
+        );
+
+        const yahooNews: NewsItem[] = await withTimeout(
+            scrapeYahooFinanceNews().catch(err => {
+                console.error('scrapeYahooFinanceNews failed:', err);
+                return [];
+            }),
+            120000,
+            []
+        );
+
 
         const result = [...yahooNews, ...news];
         res.json(result);
