@@ -25,7 +25,10 @@ async function restartBrowser() {
         }
         browser = null;
     }
-    browser = await puppeteer.launch({ headless: true });
+    browser = await puppeteer.launch({
+        headless: false,
+        slowMo: 1
+    });
     console.log("Puppeteer restarted");
 }
 
@@ -42,6 +45,7 @@ export async function getBrowser(): Promise<Browser> {
         console.error("Puppeteer launch failed:", err?.message || err);
         // Retry once after short delay
         await new Promise(resolve => setTimeout(resolve, 3000));
+        await restartBrowser();
         return getBrowser();
     }
 }
