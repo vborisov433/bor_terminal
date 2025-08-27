@@ -147,13 +147,7 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
     } catch (e) {
         console.error('Error while scrapeYahooFinanceNews:', e);
         return [];
-    } finally {
-        if (!page.isClosed()) {
-            await page.close().catch(() => {
-            });
-        }
     }
-
 }
 
 
@@ -249,10 +243,7 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
 
     } catch (e) {
         console.error('Error while CNBC News:', e);
-        await page.close();
         return [];
-    } finally {
-        await page.close();
-    }
+    } 
 
 }
