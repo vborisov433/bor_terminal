@@ -43,14 +43,6 @@ export async function getBrowser(retries = 2): Promise<Browser> {
     } catch (err: any) {
         console.error("Puppeteer launch failed:", err?.message || err);
 
-        if (retries > 0) {
-            console.log(`Retrying Puppeteer launch... (${retries} left)`);
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            return getBrowser(retries - 1);
-        } else {
-            console.log("Final retry failed — force restart.");
-
-        }
     }
 }
 
