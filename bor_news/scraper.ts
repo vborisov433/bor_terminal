@@ -29,20 +29,23 @@ const launchOptions = {
     ]
 };
 
-export async function getBrowser(retries = 2): Promise<Browser> {
-    try {
-        if (!browser) {
-            browser = await puppeteer.launch(launchOptions);
+export async function getBrowser(): Promise<Browser> {
+    if (browser && browser.isConnected()) {
+        return browser;
+    }
 
-            browser.on("disconnected", async () => {
-                console.warn("Browser disconnected. Restarting...");
-                browser = await puppeteer.launch(launchOptions);
-            });
-        }
+    try {
+        browser = await puppeteer.launch(launchOptions);
+
+        browser.on("disconnected", async () => {
+            console.warn("Browser disconnected. Resetting...");
+            browser = null; // reset, so next call relaunches
+        });
+
         return browser;
     } catch (err: any) {
         console.error("Puppeteer launch failed:", err?.message || err);
-
+        throw err;
     }
 }
 
