@@ -42,9 +42,10 @@ export async function getBrowser(): Promise<Browser> {
 }
 
 export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
-    const browser = await getBrowser();
-    const page = await browser.newPage();
     try {
+        const browser = await getBrowser();
+        const page = await browser.newPage();
+
         await page.setUserAgent(
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         );
@@ -157,15 +158,15 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
 
 
 export async function scrapeLatestNews(): Promise<NewsItem[]> {
-    browser = await getBrowser()
-    const page = await browser.newPage();
-
-    await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-    );
-    await page.setViewport({width: 1920, height: 1080, isMobile: false});
-
     try {
+        browser = await getBrowser()
+        const page = await browser.newPage();
+
+        await page.setUserAgent(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        );
+        await page.setViewport({width: 1920, height: 1080, isMobile: false});
+
 
         await sleep(800 + Math.floor(Math.random() * 1200));
         await page.goto('https://www.cnbc.com/', {waitUntil: 'domcontentloaded', timeout: 15000});
