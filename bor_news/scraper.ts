@@ -16,7 +16,20 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function restartBrowser() {
+const launchOptions = {
+    headless: false,
+    slowMo: 1,
+    args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-zygote",
+        "--single-process"
+    ]
+};
+
+export async function restartBrowser(): Promise<Browser> {
     if (browser) {
         try {
             await browser.close();
@@ -25,28 +38,41 @@ async function restartBrowser() {
         }
         browser = null;
     }
-    browser = await puppeteer.launch({
-        headless: false,
-        slowMo: 1
+
+    browser = await puppeteer.launch(launchOptions);
+
+    // if connection closes → auto restart
+    browser.on("disconnected", async () => {
+        console.warn("Browser disconnected. Restarting...");
+        browser = await puppeteer.launch(launchOptions);
     });
+
     console.log("Puppeteer restarted");
+    return browser;
 }
 
-export async function getBrowser(): Promise<Browser> {
+export async function getBrowser(retries = 2): Promise<Browser> {
     try {
         if (!browser) {
-            browser = await puppeteer.launch({
-                headless: false,
-                slowMo: 1
+            browser = await puppeteer.launch(launchOptions);
+
+            browser.on("disconnected", async () => {
+                console.warn("Browser disconnected. Restarting...");
+                browser = await puppeteer.launch(launchOptions);
             });
         }
         return browser;
     } catch (err: any) {
         console.error("Puppeteer launch failed:", err?.message || err);
-        // Retry once after short delay
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        await restartBrowser();
-        return getBrowser();
+
+        if (retries > 0) {
+            console.log(`Retrying Puppeteer launch... (${retries} left)`);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            return getBrowser(retries - 1);
+        } else {
+            console.log("Final retry failed — force restart.");
+            return restartBrowser();
+        }
     }
 }
 
