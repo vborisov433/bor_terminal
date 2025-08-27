@@ -18,15 +18,7 @@ function sleep(ms: number) {
 
 const launchOptions = {
     headless: false,
-    slowMo: 1,
-    args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--no-zygote",
-        "--single-process"
-    ]
+    slowMo: 1
 };
 
 export async function getBrowser(): Promise<Browser> {
@@ -112,7 +104,7 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                     body: JSON.stringify({link: item.link})
                 });
 
-                const result:any = await response.json();
+                const result: any = await response.json();
 
                 if (result.exists) {
                     const cleanLink = item.link.replace(/^https?:\/\//, '');
@@ -153,13 +145,14 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
 
     } catch (e) {
         console.error('Error while scrapeYahooFinanceNews:', e);
-         // close the browser
-        await page.close();
-        await browser.close();
         return [];
     } finally {
-        await page.close();
+        if (!page.isClosed()) {
+            await page.close().catch(() => {
+            });
+        }
     }
+
 }
 
 
@@ -253,8 +246,7 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
         // await browser.close();
         return news;
 
-    }
-    catch (e) {
+    } catch (e) {
         console.error('Error while CNBC News:', e);
         await page.close();
         return [];
