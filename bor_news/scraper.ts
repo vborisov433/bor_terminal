@@ -18,7 +18,7 @@ function sleep(ms: number) {
 }
 
 const launchOptions = {
-    headless: false,    
+    headless: false,
     slowMo: 1,
     args: [
         "--no-sandbox",
@@ -143,7 +143,7 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
 
                 await page.goto(item.link, {
                     waitUntil: 'domcontentloaded',
-                    timeout: 8000
+                    timeout: 21000
                 });
 
                 const date = await page.evaluate(() => {
