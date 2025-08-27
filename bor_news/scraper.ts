@@ -18,7 +18,7 @@ function sleep(ms: number) {
 
 const launchOptions = {
     headless: false,
-    slowMo: 1
+    // slowMo: 1
 };
 
 export async function getBrowser(): Promise<Browser> {
