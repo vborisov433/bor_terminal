@@ -29,27 +29,6 @@ const launchOptions = {
     ]
 };
 
-export async function restartBrowser(): Promise<Browser> {
-    if (browser) {
-        try {
-            await browser.close();
-        } catch (e) {
-            console.error("Error closing browser:", e);
-        }
-        browser = null;
-    }
-
-    browser = await puppeteer.launch(launchOptions);
-
-    // if connection closes → auto restart
-    browser.on("disconnected", async () => {
-        console.warn("Browser disconnected. Restarting...");
-        browser = await puppeteer.launch(launchOptions);
-    });
-
-    return browser;
-}
-
 export async function getBrowser(retries = 2): Promise<Browser> {
     try {
         if (!browser) {
@@ -70,7 +49,7 @@ export async function getBrowser(retries = 2): Promise<Browser> {
             return getBrowser(retries - 1);
         } else {
             console.log("Final retry failed — force restart.");
-            return restartBrowser();
+
         }
     }
 }
@@ -179,7 +158,7 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
 
     } catch (e) {
         console.error('Error while scrapeYahooFinanceNews:', e);
-        await restartBrowser();
+        await page.close();
         return [];
     } finally {
         await page.close();
@@ -279,8 +258,8 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
 
     }
     catch (e) {
-        console.error('Error while scrapeYahooFinanceNews:', e);
-        await restartBrowser();
+        console.error('Error while CNBC News:', e);
+        await page.close();
         return [];
     } finally {
         await page.close();
