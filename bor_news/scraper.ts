@@ -96,13 +96,12 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
         // console.log(links)
 
         const news: NewsItem[] = [];
-
         for (const item of links) {
             try {
                 const response = await fetch('http://15.0.1.50/api/news/check', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({link: item.link})
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ link: item.link })
                 });
 
                 const result: any = await response.json();
@@ -122,12 +121,16 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                     continue;
                 }
 
-                await page.goto(item.link, {
+                // 🆕 open fresh page for this item
+                const subPage = await (await getBrowser()).newPage();
+                subPage.setDefaultNavigationTimeout(8000);
+
+                await subPage.goto(item.link, {
                     waitUntil: 'domcontentloaded',
-                    timeout: 15000
+                    timeout: 8000
                 });
 
-                const date = await page.evaluate(() => {
+                const date = await subPage.evaluate(() => {
                     const dateElement = document.querySelector('time.byline-attr-meta-time');
                     return dateElement ? dateElement.getAttribute('datetime') || '' : '';
                 });
@@ -136,9 +139,12 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                     ...item,
                     date
                 });
+
+                await subPage.close();
+
             } catch (err) {
-                await page.close();
                 console.error(`Failed to scrape ${item.link}:`, err);
+                // just skip and move on
             }
         }
 
@@ -244,6 +250,6 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
     } catch (e) {
         console.error('Error while CNBC News:', e);
         return [];
-    } 
+    }
 
 }
