@@ -171,7 +171,7 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                     date
                 });
             } catch (err) {
-                await restartBrowser();
+                await page.close();
                 console.error(`Failed to scrape ${item.link}:`, err);
             }
         }
