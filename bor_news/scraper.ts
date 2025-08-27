@@ -16,6 +16,19 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function restartBrowser() {
+    if (browser) {
+        try {
+            await browser.close();
+        } catch (e) {
+            console.error("Error closing browser:", e);
+        }
+        browser = null;
+    }
+    browser = await puppeteer.launch({ headless: true });
+    console.log("Puppeteer restarted");
+}
+
 export async function getBrowser(): Promise<Browser> {
     try {
         if (!browser) {
@@ -136,6 +149,7 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
 
     } catch (e) {
         console.error('Error while scrapeYahooFinanceNews:', e);
+        await restartBrowser();
         return [];
     } finally {
         await page.close();
@@ -233,6 +247,11 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
         // await browser.close();
         return news;
 
+    }
+    catch (e) {
+        console.error('Error while scrapeYahooFinanceNews:', e);
+        await restartBrowser();
+        return [];
     } finally {
         await page.close();
     }
