@@ -153,7 +153,9 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
 
     } catch (e) {
         console.error('Error while scrapeYahooFinanceNews:', e);
+         // close the browser
         await page.close();
+        await browser.close();
         return [];
     } finally {
         await page.close();
