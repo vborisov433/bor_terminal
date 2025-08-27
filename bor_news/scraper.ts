@@ -113,48 +113,29 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                 });
 
                 const result: any = await response.json();
-
                 if (result.exists) {
-                    const cleanLink = item.link.replace(/^https?:\/\//, '');
-                    const shortLink = cleanLink.length > 71
-                        ? cleanLink.substring(0, 71) + '…'
-                        : cleanLink;
-
-                    const now = new Date();
-                    const hours = now.getHours().toString().padStart(2, '0');
-                    const minutes = now.getMinutes().toString().padStart(2, '0');
-                    const formattedTime = `${hours}:${minutes}`;
-
-                    console.log(`[${formattedTime}][in.db] ${shortLink}`);
+                    console.log(`[in.db] ${item.link}`);
                     continue;
                 }
 
-                // 🆕 open fresh page for this item
-                const subPage = await (await getBrowser()).newPage();
-                subPage.setDefaultNavigationTimeout(8000);
-
-                await subPage.goto(item.link, {
+                await page.goto(item.link, {
                     waitUntil: 'domcontentloaded',
                     timeout: 8000
                 });
 
-                const date = await subPage.evaluate(() => {
+                const date = await page.evaluate(() => {
                     const dateElement = document.querySelector('time.byline-attr-meta-time');
                     return dateElement ? dateElement.getAttribute('datetime') || '' : '';
                 });
 
-                news.push({
-                    ...item,
-                    date
-                });
-
-                await subPage.close();
-
+                news.push({ ...item, date });
             } catch (err) {
                 console.error(`Failed to scrape ${item.link}:`, err);
-                // just skip and move on
+                // don't close the page here, just skip
+                continue;
             }
         }
+
 
         return news;
 
