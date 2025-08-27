@@ -29,23 +29,34 @@ const launchOptions = {
     ]
 };
 
-export async function getBrowser(): Promise<Browser> {
-    if (browser && browser.isConnected()) {
-        return browser;
+export async function restartBrowser(): Promise<Browser> {
+    if (browser) {
+        try {
+            await browser.close();
+        } catch (e) {
+            console.error("Error closing browser:", e);
+        }
+        browser = null;
     }
+    browser = await puppeteer.launch({ headless: true });
+    console.log("Puppeteer restarted");
+    return browser; // ✅ ensure a return
+}
 
+export async function getBrowser(): Promise<Browser> {
     try {
-        browser = await puppeteer.launch(launchOptions);
-
-        browser.on("disconnected", async () => {
-            console.warn("Browser disconnected. Resetting...");
-            browser = null; // reset, so next call relaunches
-        });
-
-        return browser;
+        if (!browser) {
+            browser = await puppeteer.launch({
+                headless: true,
+                slowMo: 1,
+                args: ["--no-sandbox", "--disable-setuid-sandbox"]
+            });
+        }
+        return browser; // ✅ ensure return
     } catch (err: any) {
         console.error("Puppeteer launch failed:", err?.message || err);
-        throw err;
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        return getBrowser(); // ✅ recursive return
     }
 }
 
