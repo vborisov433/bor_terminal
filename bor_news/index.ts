@@ -7,42 +7,27 @@ const app = express();
 const PORT = 3000;
 let isScraping = false;
 
-async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-    return Promise.race([
-        promise,
-        new Promise<T>((resolve) =>
-            setTimeout(() => resolve(fallback), ms)
-        ),
-    ]);
-}
-
 app.get('/api/latest-news', async (_req: Request, res: Response) => {
+    console.log('Loading...');
     if (isScraping) {
+        console.log('scrape in progress, returning empty array');
         // Another request is already running, return quickly
         return res.json([]);
     }
     isScraping = true;
 
     try {
-        const news: NewsItem[] = await withTimeout(
-            scrapeLatestNews().catch(err => {
-                console.error('scrapeLatestNews failed:', err);
-                isScraping = false;
-                return [];
-            }),
-            60000, // 1 minute timeout
-            []
-        );
+        const news: NewsItem[] = await scrapeLatestNews().catch(err => {
+            console.error('scrapeLatestNews failed:', err);
+            isScraping = false;
+            return [];
+        });
 
-        const yahooNews: NewsItem[] = await withTimeout(
-            scrapeYahooFinanceNews().catch(err => {
-                console.error('scrapeYahooFinanceNews failed:', err);
-                isScraping = false;
-                return [];
-            }),
-            120000, // 2 minutes timeout
-            []
-        );
+        const yahooNews: NewsItem[] = await scrapeYahooFinanceNews().catch(err => {
+            console.error('scrapeYahooFinanceNews failed:', err);
+            isScraping = false;
+            return [];
+        });
 
         const result = [...yahooNews, ...news];
         return res.json(result);

@@ -47,7 +47,6 @@ export async function restartBrowser(): Promise<Browser> {
         browser = await puppeteer.launch(launchOptions);
     });
 
-    console.log("Puppeteer restarted");
     return browser;
 }
 
