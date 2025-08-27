@@ -1,9 +1,10 @@
-import puppeteer, {Browser} from 'puppeteer';
+import puppeteer, {Browser, Page} from 'puppeteer';
 
 import fs from 'fs';
 import fetch from 'node-fetch';
 
 let browser: Browser | null = null;
+let page: Page | null = null;
 
 export interface NewsItem {
     title: string;
@@ -17,7 +18,7 @@ function sleep(ms: number) {
 }
 
 const launchOptions = {
-    headless: false,
+    headless: false,    
     slowMo: 1,
     args: [
         "--no-sandbox",
@@ -28,6 +29,27 @@ const launchOptions = {
         "--single-process"
     ]
 };
+
+export async function getPage(): Promise<Page> {
+    if (page && !page.isClosed()) {
+        return page;
+    }
+
+    if (!browser || !browser.isConnected()) {
+        browser = await puppeteer.launch(launchOptions);
+
+        browser.on("disconnected", () => {
+            console.warn("Browser disconnected. Resetting...");
+            browser = null;
+            page = null;
+        });
+    }
+
+    page = (await browser.pages())[0] || await browser.newPage();
+    page.setDefaultNavigationTimeout(15000);
+    page.setDefaultTimeout(15000);
+    return page;
+}
 
 export async function getBrowser(): Promise<Browser> {
     if (browser && browser.isConnected()) {
@@ -52,7 +74,8 @@ export async function getBrowser(): Promise<Browser> {
 export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
     try {
         const browser = await getBrowser();
-        const page = await browser.newPage();
+        const page = await getPage();
+
 
         await page.setUserAgent(
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
@@ -149,7 +172,8 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
 export async function scrapeLatestNews(): Promise<NewsItem[]> {
     try {
         browser = await getBrowser()
-        const page = await browser.newPage();
+        const page = await getPage();
+
 
         await page.setUserAgent(
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
