@@ -18,7 +18,15 @@ function sleep(ms: number) {
 
 const launchOptions = {
     headless: false,
-    slowMo: 1
+    slowMo: 1,
+    args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-zygote",
+        "--single-process"
+    ]
 };
 
 export async function getBrowser(): Promise<Browser> {
