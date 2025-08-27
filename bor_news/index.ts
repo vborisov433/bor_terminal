@@ -27,6 +27,7 @@ app.get('/api/latest-news', async (_req: Request, res: Response) => {
         const news: NewsItem[] = await withTimeout(
             scrapeLatestNews().catch(err => {
                 console.error('scrapeLatestNews failed:', err);
+                isScraping = false;
                 return [];
             }),
             60000, // 1 minute timeout
@@ -36,6 +37,7 @@ app.get('/api/latest-news', async (_req: Request, res: Response) => {
         const yahooNews: NewsItem[] = await withTimeout(
             scrapeYahooFinanceNews().catch(err => {
                 console.error('scrapeYahooFinanceNews failed:', err);
+                isScraping = false;
                 return [];
             }),
             120000, // 2 minutes timeout
