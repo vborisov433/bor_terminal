@@ -85,6 +85,8 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
         const news: NewsItem[] = [];
 
         for (const item of links) {
+            const articlePage = await browser.newPage();
+
             try {
                 if (!SKIP_EXISTING_CHECK) {
                     const response = await fetch('http://15.0.1.50/api/news/check', {
@@ -101,9 +103,9 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                     }
                 }
 
-                await page.goto(item.link, {
+                await articlePage.goto(item.link, {
                     waitUntil: 'domcontentloaded',
-                    timeout: 15000
+                    timeout: 20000
                 });
 
                 const date = await page.evaluate(() => {
@@ -119,6 +121,9 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                 });
             } catch (err) {
                 console.error(`Failed to scrape ${item.link}:`, err);
+            }
+            finally {
+                await articlePage.close();
             }
         }
 

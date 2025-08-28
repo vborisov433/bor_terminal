@@ -19,15 +19,15 @@ app.get('/api/latest-news', async (_req: Request, res: Response) => {
     try {
         const news: NewsItem[] = await scrapeLatestNews().catch(err => {
             console.error('scrapeLatestNews failed:', err);
-            isScraping = false;
             return [];
         });
 
         const yahooNews: NewsItem[] = await scrapeYahooFinanceNews().catch(err => {
             console.error('scrapeYahooFinanceNews failed:', err);
-            isScraping = false;
             return [];
         });
+
+        console.log('---- Scraping completed. ----');
 
         const result = [...yahooNews, ...news];
         return res.json(result);
@@ -40,7 +40,6 @@ app.get('/api/latest-news', async (_req: Request, res: Response) => {
         });
 
     } finally {
-        // Always release the lock
         isScraping = false;
     }
 });
