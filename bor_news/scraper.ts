@@ -1,10 +1,10 @@
-import puppeteer, {Browser, Page} from 'puppeteer';
+import puppeteer from 'puppeteer';
 
+let browser: puppeteer.Browser;
 import fs from 'fs';
 import fetch from 'node-fetch';
 
-let browser: Browser | null = null;
-let page: Page | null = null;
+const SKIP_EXISTING_CHECK = false;
 
 export interface NewsItem {
     title: string;
@@ -17,66 +17,22 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const launchOptions = {
-    headless: false,
-    slowMo: 1,
-    args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--no-zygote",
-        "--single-process"
-    ]
-};
-
-export async function getPage(): Promise<Page> {
-    if (page && !page.isClosed()) {
-        return page;
+async function getBrowser() {
+    if (!browser) {
+        browser = await puppeteer.launch(
+            {
+                headless: false,
+                slowMo: 1,
+            }
+        );
     }
-
-    if (!browser || !browser.isConnected()) {
-        browser = await puppeteer.launch(launchOptions);
-
-        browser.on("disconnected", () => {
-            console.warn("Browser disconnected. Resetting...");
-            browser = null;
-            page = null;
-        });
-    }
-
-    page = (await browser.pages())[0] || await browser.newPage();
-    page.setDefaultNavigationTimeout(15000);
-    page.setDefaultTimeout(15000);
-    return page;
-}
-
-export async function getBrowser(): Promise<Browser> {
-    if (browser && browser.isConnected()) {
-        return browser;
-    }
-
-    try {
-        browser = await puppeteer.launch(launchOptions);
-
-        browser.on("disconnected", async () => {
-            console.warn("Browser disconnected. Resetting...");
-            browser = null; // reset, so next call relaunches
-        });
-
-        return browser;
-    } catch (err: any) {
-        console.error("Puppeteer launch failed:", err?.message || err);
-        throw err;
-    }
+    return browser;
 }
 
 export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
+    const browser = await getBrowser();
+    const page = await browser.newPage();
     try {
-        const browser = await getBrowser();
-        const page = await getPage();
-
-
         await page.setUserAgent(
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         );
@@ -127,23 +83,27 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
         // console.log(links)
 
         const news: NewsItem[] = [];
+
         for (const item of links) {
             try {
-                const response = await fetch('http://15.0.1.50/api/news/check', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ link: item.link })
-                });
+                if (!SKIP_EXISTING_CHECK) {
+                    const response = await fetch('http://15.0.1.50/api/news/check', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({link: item.link})
+                    });
 
-                const result: any = await response.json();
-                if (result.exists) {
-                    console.log(`[in.db] ${item.link}`);
-                    continue;
+                    const result:any = await response.json();
+
+                    if (result.exists) {
+                        console.log(`Skipping ${item.link} — already exists in DB`);
+                        continue;
+                    }
                 }
 
                 await page.goto(item.link, {
                     waitUntil: 'domcontentloaded',
-                    timeout: 21000
+                    timeout: 15000
                 });
 
                 const date = await page.evaluate(() => {
@@ -151,35 +111,38 @@ export async function scrapeYahooFinanceNews(): Promise<NewsItem[]> {
                     return dateElement ? dateElement.getAttribute('datetime') || '' : '';
                 });
 
-                news.push({ ...item, date });
+                console.log(`Scraped: ${item.title} (${date})`);
+
+                news.push({
+                    ...item,
+                    date
+                });
             } catch (err) {
                 console.error(`Failed to scrape ${item.link}:`, err);
-                // don't close the page here, just skip
-                continue;
             }
         }
-
 
         return news;
 
     } catch (e) {
         console.error('Error while scrapeYahooFinanceNews:', e);
         return [];
+    } finally {
+        await page.close();
     }
 }
 
 
 export async function scrapeLatestNews(): Promise<NewsItem[]> {
+    browser = await getBrowser()
+    const page = await browser.newPage();
+
+    await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    );
+    await page.setViewport({width: 1920, height: 1080, isMobile: false});
+
     try {
-        browser = await getBrowser()
-        const page = await getPage();
-
-
-        await page.setUserAgent(
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-        );
-        await page.setViewport({width: 1920, height: 1080, isMobile: false});
-
 
         await sleep(800 + Math.floor(Math.random() * 1200));
         await page.goto('https://www.cnbc.com/', {waitUntil: 'domcontentloaded', timeout: 15000});
@@ -260,9 +223,8 @@ export async function scrapeLatestNews(): Promise<NewsItem[]> {
         // await browser.close();
         return news;
 
-    } catch (e) {
-        console.error('Error while CNBC News:', e);
-        return [];
+    } finally {
+        await page.close();
     }
 
 }
