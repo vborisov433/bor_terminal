@@ -17,6 +17,7 @@ use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use function Symfony\Component\DependencyInjection\Loader\Configurator\env;
 
 #[AsCommand(
     name: 'app:become-rich',
@@ -48,7 +49,7 @@ class BecomeRichCommand extends Command
 
         // 1. Import Section
         $io->section('Fetching latest news...');
-        $response = $this->httpClient->request('GET', 'http://localhost:3000/api/latest-news',
+        $response = $this->httpClient->request('GET', 'http://15.0.1.98:3000/api/latest-news',
              [
                 'timeout' => 900
             ]);

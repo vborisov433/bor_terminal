@@ -32,7 +32,7 @@ class NewsImportCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $io->section('Fetching latest news...');
-        $response = $this->httpClient->request('GET', 'http://localhost:3000/api/latest-news');
+        $response = $this->httpClient->request('GET', 'http://15.0.1.98:3000/api/latest-news');
         $newsArray = $response->toArray();
 
         usort($newsArray, function($a, $b) {
