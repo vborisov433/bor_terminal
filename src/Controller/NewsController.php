@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\MarketSummary;
 use App\Entity\PromptTemplate;
+use App\Entity\Service;
 use App\Repository\MarketSummaryRepository;
 use App\Repository\NewsItemRepository;
 use App\Repository\PromptTemplateRepository;
@@ -26,11 +27,22 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class NewsController extends AbstractController
 {
     #[Route('/', name: 'app_news')]
-    public function index(Request $request, NewsItemRepository $repo, PaginatorInterface $paginator): Response
+    public function index(Request $request, NewsItemRepository $repo, PaginatorInterface $paginator, EntityManagerInterface $em): Response
     {
         $surpriseMin = $request->query->get('surprise_min');
         $impactMin = $request->query->get('impact_min');
         $page = max(1, (int)$request->query->get('page', 1)); // current page number
+
+        $repo = $em->getRepository(Service::class);
+        $service = $repo->findOneBy(['name' => 'bornews']);
+
+        $isBornewsOnline = false;
+        if ($service && $service->getLastSeen()) {
+            $tenMinutesAgo = new \DateTime('-10 minutes');
+            if ($service->getLastSeen() > $tenMinutesAgo) {
+                $isBornewsOnline = true;
+            }
+        }
 
         $qb = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
@@ -65,6 +77,7 @@ final class NewsController extends AbstractController
             'impact_min' => $impactMin,
             'total_news_count' => $repo->countAll(),
             'first_news_date' => $firstNewsDate,
+            'isBornewsOnline' => $isBornewsOnline,
         ]);
     }
 

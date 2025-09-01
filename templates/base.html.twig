@@ -16,7 +16,14 @@
 <body>
 <nav class="navbar navbar-expand bg-primary navbar-dark mb-4 shadow">
     <div class="container">
-        <a class="navbar-brand" href="{{ path('app_news') }}">📈 BOR Terminal</a>
+        <a class="navbar-brand" href="{{ path('app_news') }}">📈 BOR Terminal
+
+            <span class="ms-2">
+             <span class="d-inline-block rounded-circle {{ isOnline ? 'bg-success' : 'bg-danger' }}"
+              style="width:10px; height:10px;"></span>
+            </span>
+        </a>
+
 
         <ul class="navbar-nav ms-auto">
             <li class="nav-item">

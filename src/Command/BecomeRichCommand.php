@@ -5,6 +5,7 @@ namespace App\Command;
 use App\Entity\MarketAnalysis;
 use App\Entity\NewsArticleInfo;
 use App\Entity\NewsItem;
+use App\Entity\Service;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -25,6 +26,29 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\env;
 )]
 class BecomeRichCommand extends Command
 {
+    /**
+     * @param OutputInterface $output
+     * @return mixed
+     */
+    public function updateBornewsService()
+    {
+        $repo = $this->em->getRepository(Service::class);
+        $service = $repo->findOneBy(['name' => 'bornews']);
+
+        if (!$service){
+            $service = new Service();
+            $service->setName('bornews');
+            $service->setLastSeen(new \DateTime());
+            $service->setData('Initialized or updated data');
+        }
+        $service->setLastSeen(new \DateTime());
+
+        $this->em->persist($service);
+        $this->em->flush();
+
+        return $repo;
+    }
+
     protected function configure(): void
     {
         $this
@@ -54,6 +78,10 @@ class BecomeRichCommand extends Command
                 'timeout' => 900
             ]);
         $newsArray = $response->toArray();
+
+        if (is_array($newsArray)){
+            $this->updateBornewsService();
+        }
 
         usort($newsArray, fn($a, $b) => $b['index'] <=> $a['index']);
 
