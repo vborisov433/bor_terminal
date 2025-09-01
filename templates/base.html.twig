@@ -9,7 +9,9 @@
     <link rel="stylesheet" href="/dist/css/bootstrap-icons@1.11.3.css">
     <link href="/css/main.css" rel="stylesheet">
     <style>
-        body { background: #f8f9fa; }
+        body {
+            background: #f8f9fa;
+        }
     </style>
     {% block stylesheets %}{% endblock %}
 </head>
@@ -18,12 +20,13 @@
     <div class="container">
         <a class="navbar-brand" href="{{ path('app_news') }}">📈 BOR Terminal
 
-            <span class="ms-2">
-             <span class="d-inline-block rounded-circle {{ isBornewsOnline ? 'bg-success' : 'bg-danger' }}"
-              style="width:10px; height:10px;"></span>
-            </span>
+            {% if  not isBornewsOnline %}
+                <span class="ms-2">
+                    <span class="d-inline-block rounded-circle {{ isBornewsOnline ? 'bg-success' : 'bg-danger' }}"
+                          style="width:10px; height:10px;"></span>
+                </span>
+            {% endif %}
         </a>
-
 
         <ul class="navbar-nav ms-auto">
             <li class="nav-item">

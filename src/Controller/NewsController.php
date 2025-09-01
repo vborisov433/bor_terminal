@@ -33,8 +33,8 @@ final class NewsController extends AbstractController
         $impactMin = $request->query->get('impact_min');
         $page = max(1, (int)$request->query->get('page', 1)); // current page number
 
-        $repo = $em->getRepository(Service::class);
-        $service = $repo->findOneBy(['name' => 'bornews']);
+        $serviceRepo = $em->getRepository(Service::class);
+        $service = $serviceRepo->findOneBy(['name' => 'bornews']);
 
         $isBornewsOnline = false;
         if ($service && $service->getLastSeen()) {
