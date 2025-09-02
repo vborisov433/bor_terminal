@@ -20,11 +20,13 @@
     <div class="container">
         <a class="navbar-brand" href="{{ path('app_news') }}">📈 BOR Terminal
 
-            {% if  not isBornewsOnline %}
-                <span class="ms-2">
-                    <span class="d-inline-block rounded-circle {{ isBornewsOnline ? 'bg-success' : 'bg-danger' }}"
-                          style="width:10px; height:10px;"></span>
-                </span>
+            {% if isBornewsOnline is defined %}
+                {% if  not isBornewsOnline %}
+                    <span class="ms-2">
+                        <span class="d-inline-block rounded-circle {{ isBornewsOnline ? 'bg-success' : 'bg-danger' }}"
+                              style="width:10px; height:10px;"></span>
+                    </span>
+                {% endif %}
             {% endif %}
         </a>
 
