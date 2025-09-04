@@ -2,3 +2,4 @@
 vendor
 var
 bor_gpt4free/LOGS
+.env
