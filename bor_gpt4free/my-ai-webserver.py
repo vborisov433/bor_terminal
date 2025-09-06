@@ -50,15 +50,27 @@ HTML_TEMPLATE = '''
 </html>
 '''
 
+def ask_gpt_dynamic(question, model):
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": question}],
+        web_search=False,
+        provider="PollinationsAI"  # still fixed here
+    )
+    return response.choices[0].message.content
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     answer = ""
     error = ""
     question = ""
+
+    model = "gpt-4o"
+
     if request.method == 'POST':
         question = request.form['question']
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(ask_gpt, question)
+            future = executor.submit(ask_gpt_dynamic, question, model)
             try:
                 answer = future.result(timeout=15)  # 15 seconds timeout
             except concurrent.futures.TimeoutError:
@@ -82,23 +94,14 @@ def api_ask_gpt():
     if not request.is_json:
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
-    # Get model from query parameter, fallback to default
-    model = request.args.get("model", "gpt-4o")
-
     data = request.get_json()
     question = data.get("question", "")
 
+    # Get model from query parameter, fallback to default
+    model = request.args.get("model", "gpt-4o")
+
     if not question:
         return jsonify({"error": "Missing 'question' in the request body."}), 400
-
-    def ask_gpt_dynamic(question, model):
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": question}],
-            web_search=False,
-            provider="PollinationsAI"  # still fixed here
-        )
-        return response.choices[0].message.content
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(ask_gpt_dynamic, question, model)
@@ -112,4 +115,4 @@ def api_ask_gpt():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', debug=True, port=5000)
