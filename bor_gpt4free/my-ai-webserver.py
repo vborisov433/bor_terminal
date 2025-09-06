@@ -97,7 +97,7 @@ def api_ask_gpt():
     data = request.get_json()
     question = data.get("question", "")
 
-    # Get model from query parameter, fallback to default
+    # Get model from query parameter, fallback to default 1
     model = request.args.get("model", "gpt-4o")
 
     if not question:
