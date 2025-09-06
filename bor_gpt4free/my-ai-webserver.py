@@ -72,7 +72,7 @@ def index():
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(ask_gpt_dynamic, question, model)
             try:
-                answer = future.result(timeout=15)  # 15 seconds timeout
+                answer = future.result(timeout=115)
             except concurrent.futures.TimeoutError:
                 error = "Sorry, the request took too long and timed out. Please try again or reload."
             except Exception as e:
