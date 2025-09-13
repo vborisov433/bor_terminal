@@ -80,7 +80,7 @@ for each market in format:
 }
 TEXT;
             try {
-                $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt?model=gpt-4.1', [
+                $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt', [
                     'json' => ['question' => $question],
                 ]);
                 $data = $response->toArray();
