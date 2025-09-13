@@ -51,10 +51,9 @@ class AnalyzeGptCommand extends Command
         $io->progressStart($total);
 
         foreach ($newsItems as $newsItem) {
-            // Build the question/prompt
             $question = <<<TEXT
-read
-{$newsItem->getLink()}
+from NEWS: 
+{$newsItem->getContent()}
 
 for markets: dow , audjpy , audusd , dxy , fed interest rate
 give: market sentiment , short summary
