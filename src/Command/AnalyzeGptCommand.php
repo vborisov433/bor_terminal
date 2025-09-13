@@ -62,7 +62,7 @@ for each market in format:
 
 "markets": [
 {
-   "magnitude": "", // from 1-10
+   "magnitude": "", // classify from 1 min to 10 max
    "market": "",
    "sentiment": "Bearish or Bullish or Neutral",
    "reason": "...",
