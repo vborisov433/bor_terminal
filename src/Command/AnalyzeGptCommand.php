@@ -73,8 +73,8 @@ for each market in format:
 "article_info": {
    "has_market_impact": false or true,
    "title_headline": "",
-   "news_surprise_index": 0,
-   "economy_impact": 0,
+   "news_surprise_index": 0, // classify from 1 min to 10 max
+   "economy_impact": 0, // classify from 1 min to 10 max
    "macro_keyword_heatmap": [],
    "summary": ""
 }
