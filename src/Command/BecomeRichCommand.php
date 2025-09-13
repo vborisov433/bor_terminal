@@ -22,7 +22,7 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\env;
 
 #[AsCommand(
     name: 'app:become-rich',
-    description: 'Add a short description for your command',
+    description: 'php bin/console app:become-rich',
 )]
 class BecomeRichCommand extends Command
 {
@@ -69,11 +69,13 @@ class BecomeRichCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
+        $URL_FETCH_NEWS = "15.0.1.98";
+
         $repo = $this->em->getRepository(NewsItem::class);
 
         // 1. Import Section
         $io->section('Fetching latest news...');
-        $response = $this->httpClient->request('GET', 'http://15.0.1.98:3000/api/latest-news',
+        $response = $this->httpClient->request('GET', 'http://'.$URL_FETCH_NEWS.':3000/api/latest-news',
              [
                 'timeout' => 900
             ]);
@@ -98,6 +100,7 @@ class BecomeRichCommand extends Command
             $entity = new NewsItem();
             $entity->setTitle($newsData['title']);
             $entity->setLink($newsData['link']);
+            $entity->setContent($newsData['content']);
             $entity->setDate(new \DateTimeImmutable($newsData['date']));
 
             try {
@@ -126,8 +129,8 @@ class BecomeRichCommand extends Command
 
         foreach ($newItems as $newsItem) {
             $question = <<<TEXT
-read
-{$newsItem->getLink()}
+from NEWS: 
+{$newsItem->getContent()}
 
 for markets: dow , audjpy , audusd , dxy , fed interest rate
 give: market sentiment , short summary

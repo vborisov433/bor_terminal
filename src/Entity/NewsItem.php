@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\NewsItemRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NewsItemRepository::class)]
@@ -40,6 +41,9 @@ class NewsItem
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
+
+    #[ORM\Column(type: Types::TEXT)]
+    private ?string $content = null;
 
     public function __construct()
     {
@@ -160,6 +164,18 @@ class NewsItem
     public function marketAnalysesToString(): string
     {
         return implode(',', $this->marketAnalyses->map(fn(MarketAnalysis $ma) => $ma->toString())->toArray());
+    }
+
+    public function getContent(): ?string
+    {
+        return $this->content;
+    }
+
+    public function setContent(string $content): static
+    {
+        $this->content = $content;
+
+        return $this;
     }
 
 }
