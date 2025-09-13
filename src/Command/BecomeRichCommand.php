@@ -158,7 +158,7 @@ for each market in format:
 TEXT;
             try {
                 $data = $this->requestWithRetries(function() use ($question) {
-                    $response = $this->httpClient->request('POST', 'http://localhost:5000/api/ask-gpt?model=gpt-4.1', [
+                    $response = $this->httpClient->request('POST', 'http://localhost:5000/api/ask-gpt', [
                         'json' => ['question' => $question],
                         // optionally, set timeout: 'timeout' => 40
                     ]);
