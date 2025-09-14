@@ -1,0 +1,161 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}ImpactController!{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <h2>Select News Impact Parameters</h2>
+
+        <div class="row">
+            <div class="col col-md-4">
+                <form method="get" action="{{ path('news_impact') }}">
+                    <div class="mb-4">
+                        <label for="newsSurpriseIndex" class="form-label">
+                            News Surprise Index: <span id="newsSurpriseValue">{{ newsSurpriseIndex }}</span>
+                        </label>
+                        <input type="range" class="form-range" min="1" max="10" id="newsSurpriseIndex" name="newsSurpriseIndex" value="{{ newsSurpriseIndex }}" oninput="document.getElementById('newsSurpriseValue').innerText = this.value">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="economyImpact" class="form-label">
+                            Economy Impact: <span id="economyImpactValue">{{ economyImpact }}</span>
+                        </label>
+                        <input type="range" class="form-range" min="1" max="10" id="economyImpact" name="economyImpact" value="{{ economyImpact }}" oninput="document.getElementById('economyImpactValue').innerText = this.value">
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                        <button type="button" class="btn btn-secondary" id="resetBtn">Reset</button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+
+        <div class="card mb-2 mt-2">
+            <div class="card-header fw-semibold">Details</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 180px;">Market</th>
+                            <th class="text-end">Avg Sentiment</th>
+                            <th class="text-end">Score (-100..+100)</th>
+                            <th class="text-end">Items</th>
+                            {#                            <th class="text-end">Total Magnitude</th>#}
+                            <th class="text-end text-success">Positive</th>
+                            <th class="text-end text-danger">Negative</th>
+                            <th class="text-end text-secondary">Neutral</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in marketsTable %}
+                            {% set badgeColor = row.scaledScore > 5 ? 'success' : (row.scaledScore < -5 ? 'danger' : 'secondary') %}
+                            <tr>
+                                <td class="fw-semibold">{{ row.market }}</td>
+                                <td class="text-end">
+                <span class="badge text-bg-{{ badgeColor }}">
+                  {{ (row.avgSentiment)|number_format(3, '.', ',') }}
+                </span>
+                                </td>
+                                <td class="text-end">{{ row.scaledScore|number_format(1, '.', ',') }}</td>
+                                <td class="text-end">{{ row.items }}</td>
+                                {#                                <td class="text-end">{{ row.totalMagnitude }}</td>#}
+                                <td class="text-end text-success">{{ row.counts.positive }}</td>
+                                <td class="text-end text-danger">{{ row.counts.negative }}</td>
+                                <td class="text-end text-secondary">{{ row.counts.neutral }}</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">No data to display.</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Weighted Average Sentiment by Market</span>
+                <small class="text-muted">Scale: -100 (very negative) to +100 (very positive)</small>
+            </div>
+            <div class="card-body">
+                {% if chart.labels is not empty %}
+                    <canvas id="marketsChart" height="300"></canvas>
+                {% else %}
+                    <div class="text-muted">No market analyses found for the latest news selection.</div>
+                {% endif %}
+            </div>
+        </div>
+
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
+    <script>
+        {% if chart.labels is not empty %}
+        const ctx = document.getElementById('marketsChart').getContext('2d');
+        const colors = {{ chart.colors|json_encode|raw }};
+        const marketsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ chart.labels|json_encode|raw }},
+                datasets: [{
+                    label: 'Sentiment Score (-100..+100)',
+                    data: {{ chart.scores|json_encode|raw }},
+                    backgroundColor: colors,
+                    borderColor: colors.map(c => c.replace('0.75', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // ✅ Fix height
+                animation: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        suggestedMin: -100,
+                        suggestedMax: 100,
+                        title: { display: true, text: 'Sentiment Score' }
+                    }
+                }
+            }
+
+        });
+        {% endif %}
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            $('#resetBtn').on('click', function() {
+                const defaultSurprise = 5;
+                const defaultEconomy = 5;
+
+                // Reset slider values
+                $('#newsSurpriseIndex').val(defaultSurprise);
+                $('#economyImpact').val(defaultEconomy);
+
+                // Update displayed values
+                $('#newsSurpriseValue').text(defaultSurprise);
+                $('#economyImpactValue').text(defaultEconomy);
+
+                setTimeout(()=>{
+                     // reload page with current values
+                        const params = new URLSearchParams({
+                            newsSurpriseIndex: defaultSurprise,
+                            economyImpact: defaultEconomy
+                        });
+                        window.location.href = '{{ path('news_impact') }}' + '?' + params.toString();
+
+                }, 600);
+            });
+        });
+    </script>
+
+
+{% endblock %}
