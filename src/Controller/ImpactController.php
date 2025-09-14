@@ -204,19 +204,24 @@ final class ImpactController extends AbstractController
 
 //        dump($key);
 
-        // Dictionary of aliases -> canonical label
-        // Add more aliases as you encounter them.
+        // USE ALL LOWERCASE KEYS - ON LEFT SIDE ONLY
         $dict = [
             'dow'                              => 'Dow Jones Industrial Average',
             'dow jones'                        => 'Dow Jones Industrial Average',
             'dow jones industrial average'     => 'Dow Jones Industrial Average',
             'dow jones industrial average dow' => 'Dow Jones Industrial Average', // if "(DOW)" was stripped
             'dji'                              => 'Dow Jones Industrial Average',
+
             'aud usd' => 'AUD/USD',
             'audusd' => 'AUD/USD',
             'audjpy' => 'AUD/JPY',
+
             'fed interest rate' => 'Fed interest rate',
             'federal reserve interest rate' => 'Fed interest rate',
+            'us fed interest rate' => 'Fed interest rate',
+            'federal reserve interest rate policy' => 'Fed interest rate',
+            'fed interest rate decision' => 'Fed interest rate',
+
             'dxy' => 'US Dollar Index',
             'us dollar index' => 'US Dollar Index',
 
