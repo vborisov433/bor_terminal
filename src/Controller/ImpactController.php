@@ -211,6 +211,7 @@ final class ImpactController extends AbstractController
             'dow jones industrial average'     => 'Dow Jones Industrial Average',
             'dow jones industrial average dow' => 'Dow Jones Industrial Average', // if "(DOW)" was stripped
             'dji'                              => 'Dow Jones Industrial Average',
+            'djia'                              => 'Dow Jones Industrial Average',
 
             'aud usd' => 'AUD/USD',
             'audusd' => 'AUD/USD',
