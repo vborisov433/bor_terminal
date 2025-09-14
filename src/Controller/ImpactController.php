@@ -148,6 +148,10 @@ final class ImpactController extends AbstractController
         });
 
         foreach ($markets as $market => $data) {
+            if ($data['items'] < 10) {
+                continue;
+            }
+
             $avg    = ($data['weight'] > 0) ? ($data['sum'] / $data['weight']) : 0.0; // -1..+1
             $scaled = round($avg * 100, 1); // -100..+100
 
@@ -222,6 +226,8 @@ final class ImpactController extends AbstractController
             'us fed interest rate' => 'Fed',
             'federal reserve interest rate policy' => 'Fed',
             'fed interest rate decision' => 'Fed',
+            'federal reserve interest rate expectations' => 'Fed',
+            'fed interest rate outlook' => 'Fed',
 
             'dxy' => 'US Dollar',
             'us dollar index' => 'US Dollar',
