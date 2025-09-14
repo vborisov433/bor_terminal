@@ -42,11 +42,11 @@
                         <tr>
                             <th style="min-width: 180px;">Market</th>
                             <th class="text-end">Avg Sentiment</th>
-                            <th class="text-end">Score (-100..+100)</th>
-                            <th class="text-end">Items</th>
+{#                            <th class="text-end">Score (-100..+100)</th>#}
+                            <th class="text-end">#</th>
                             {#                            <th class="text-end">Total Magnitude</th>#}
-                            <th class="text-end text-success">Positive</th>
-                            <th class="text-end text-danger">Negative</th>
+                            <th class="text-end text-success">Pos</th>
+                            <th class="text-end text-danger">Neg</th>
                             <th class="text-end text-secondary">Neutral</th>
                         </tr>
                         </thead>
@@ -57,10 +57,10 @@
                                 <td class="fw-semibold">{{ row.market }}</td>
                                 <td class="text-end">
                 <span class="badge text-bg-{{ badgeColor }}">
-                  {{ (row.avgSentiment)|number_format(3, '.', ',') }}
+                  {{ (row.avgSentiment)|number_format(1, '.', ',') }}
                 </span>
                                 </td>
-                                <td class="text-end">{{ row.scaledScore|number_format(1, '.', ',') }}</td>
+{#                                <td class="text-end">{{ row.scaledScore|number_format(1, '.', ',') }}</td>#}
                                 <td class="text-end">{{ row.items }}</td>
                                 {#                                <td class="text-end">{{ row.totalMagnitude }}</td>#}
                                 <td class="text-end text-success">{{ row.counts.positive }}</td>

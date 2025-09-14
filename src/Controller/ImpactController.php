@@ -202,29 +202,29 @@ final class ImpactController extends AbstractController
         $key = trim($key);
         $key = strtolower($key);
 
-//        dump($key);
-
         // USE ALL LOWERCASE KEYS - ON LEFT SIDE ONLY
         $dict = [
-            'dow'                              => 'Dow Jones Industrial Average',
-            'dow jones'                        => 'Dow Jones Industrial Average',
-            'dow jones industrial average'     => 'Dow Jones Industrial Average',
-            'dow jones industrial average dow' => 'Dow Jones Industrial Average', // if "(DOW)" was stripped
-            'dji'                              => 'Dow Jones Industrial Average',
-            'djia'                              => 'Dow Jones Industrial Average',
+            'dow'                              => 'Dow',
+            'dow jones'                        => 'Dow',
+            'dow jones industrial average'     => 'Dow',
+            'dow jones industrial average dow' => 'Dow',
+            'dji'                              => 'Dow',
+            'djia'                              => 'Dow',
 
-            'aud usd' => 'AUD/USD',
-            'audusd' => 'AUD/USD',
-            'audjpy' => 'AUD/JPY',
+            'aud usd' => 'AUDUSD',
+            'audusd' => 'AUDUSD',
+            'aud/usd' => 'AUDUSD',
+            'audjpy' => 'AUDJPY',
+            'aud/jpy' => 'AUDJPY',
 
-            'fed interest rate' => 'Fed interest rate',
-            'federal reserve interest rate' => 'Fed interest rate',
-            'us fed interest rate' => 'Fed interest rate',
-            'federal reserve interest rate policy' => 'Fed interest rate',
-            'fed interest rate decision' => 'Fed interest rate',
+            'fed interest rate' => 'Fed',
+            'federal reserve interest rate' => 'Fed',
+            'us fed interest rate' => 'Fed',
+            'federal reserve interest rate policy' => 'Fed',
+            'fed interest rate decision' => 'Fed',
 
-            'dxy' => 'US Dollar Index',
-            'us dollar index' => 'US Dollar Index',
+            'dxy' => 'US Dollar',
+            'us dollar index' => 'US Dollar',
 
         ];
 
