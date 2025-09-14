@@ -38,7 +38,7 @@ final class ImpactController extends AbstractController
             ->andWhere('info.newsSurpriseIndex >= :newsSurpriseIndex')
             ->groupBy('n.id, info.id')
 //            ->orderBy('weightedScore', 'DESC')
-            ->setMaxResults(100)
+            ->setMaxResults(500)
 //            ->setParameter('wSurprise', $wSurprise)
 //            ->setParameter('wEconomy', $wEconomy)
             ->setParameter('economyImpact', $economyImpact)
