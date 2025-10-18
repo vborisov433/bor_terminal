@@ -309,7 +309,16 @@ final class NewsController extends AbstractController
 
         $promptTemplate = $promptRepo->findOneBy([], ['id' => 'DESC']);
 
-        $_question = json_encode($this->get_all_news($repo)) .' '. $promptTemplate->getTemplate();
+//        $_question = json_encode($this->get_all_news($repo)) .' '. $promptTemplate->getTemplate();
+
+        $_question_raw = json_encode($this->get_all_news($repo));
+        $_question_clean = json_decode($_question_raw, true); // decode to array
+        $_question_string = json_encode($_question_clean, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        $template = str_replace(["\r", "\n"], ' ', $promptTemplate->getTemplate());
+        $_question = $_question_string . ' ' . $template;
+
+//        dd($_question);
 
         if ($debug) {
             return new JsonResponse([

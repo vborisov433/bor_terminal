@@ -57,13 +57,47 @@ HTML_TEMPLATE = '''
 '''
 
 def ask_gpt_dynamic(question, model):
+    chunks = split_text_into_chunks(question)
+
+    # Prepare messages from chunks
+    messages = [{"role": "user", "content": chunk} for chunk in chunks]
+
+#     _messages = [{"role": "user", "content": len(chunk)} for chunk in chunks]
+#     print('TESTING CHUNKS LENGTHS:')
+#     print(_messages)
+#     exit()
+
     response = client.chat.completions.create(
         model=model,
-        messages=[{"role": "user", "content": question}],
+        messages=messages,
         web_search=False,
         provider=DEFAULT_PROVIDER  # still fixed here
     )
     return response.choices[0].message.content
+
+
+def split_text_into_chunks(text, max_length=3000):
+    """
+    Splits the input text into chunks of up to max_length characters,
+    ensuring that no word is cut during the process.
+    """
+    words = text.split()
+    chunks = []
+    current_chunk = ""
+
+    for word in words:
+        # Check if adding the next word would exceed the max_length
+        if len(current_chunk) + len(word) + 1 > max_length:
+            chunks.append(current_chunk.strip())
+            current_chunk = word + " "
+        else:
+            current_chunk += word + " "
+
+    # Add the last chunk if it's not empty
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
