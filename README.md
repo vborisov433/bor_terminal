@@ -1,6 +1,8 @@
-## bor_news
-cd ./bor_news && npm run start-dev
-cd ./bor_gpt4free && python3 my-ai-webserver.py
+## bor_gpt4free
+# go to bor_gpt4free/gpt4free/g4f/Provider/PollinationsAI.py
+# check what models are currently supported
+cd ./bor_gpt4free && git clone https://github.com/xtekky/gpt4free.git
+python3 my-ai-webserver.py
 
 ## crontab -e
 */2 * * * * cd /var/www/bor_terminal && /usr/bin/php bin/console app:become-rich
@@ -25,8 +27,5 @@ http://borterminal/api/market-summary?debug=1 , get the question
 http://localhost:5000
 
 
-## bor_gpt4free 
-cd ./bor_gpt4free && git clone https://github.com/xtekky/gpt4free.git
-- go to bor_gpt4free/gpt4free/g4f/Provider/PollinationsAI.py
-- check what models are currently supported
+
 
