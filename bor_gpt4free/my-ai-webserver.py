@@ -68,7 +68,7 @@ def ask_gpt_dynamic(question, model):
 #     exit()
 
     response = client.chat.completions.create(
-        model=model,
+        model=DEFAULT_MODEL,
         messages=messages,
         web_search=False,
         provider=DEFAULT_PROVIDER  # still fixed here
