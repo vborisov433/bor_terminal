@@ -1,11 +1,17 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'gpt4free'))
 from flask import Flask, request, render_template_string, jsonify
 from g4f.client import Client
 import concurrent.futures
 import logging
-import os
 
 app = Flask(__name__)
 client = Client()
+
+DEFAULT_TIMEOUT = 220
+DEFAULT_PROVIDER = "OIVSCodeSer0501"
+DEFAULT_MODEL = "gpt-4.1-mini"
 
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
@@ -55,7 +61,7 @@ def ask_gpt_dynamic(question, model):
         model=model,
         messages=[{"role": "user", "content": question}],
         web_search=False,
-        provider="PollinationsAI"  # still fixed here
+        provider=DEFAULT_PROVIDER  # still fixed here
     )
     return response.choices[0].message.content
 
@@ -65,14 +71,12 @@ def index():
     error = ""
     question = ""
 
-    model = "gpt-4o"
-
     if request.method == 'POST':
         question = request.form['question']
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(ask_gpt_dynamic, question, model)
+            future = executor.submit(ask_gpt_dynamic, question, DEFAULT_MODEL)
             try:
-                answer = future.result(timeout=115)
+                answer = future.result(timeout=DEFAULT_TIMEOUT)
             except concurrent.futures.TimeoutError:
                 error = "Sorry, the request took too long and timed out. Please try again or reload."
             except Exception as e:
@@ -98,7 +102,7 @@ def api_ask_gpt():
     question = data.get("question", "")
 
     # Get model from query parameter, fallback to default 1
-    model = request.args.get("model", "gpt-4o")
+    model = request.args.get("model", DEFAULT_MODEL)
 
     if not question:
         return jsonify({"error": "Missing 'question' in the request body."}), 400
@@ -106,7 +110,7 @@ def api_ask_gpt():
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(ask_gpt_dynamic, question, model)
         try:
-            answer = future.result(timeout=120)
+            answer = future.result(timeout=DEFAULT_TIMEOUT)
             return jsonify({"answer": answer, "model": model})
         except concurrent.futures.TimeoutError:
             return jsonify({"answer": "Request timed out. Try again later.", "model": model}), 504

@@ -300,13 +300,24 @@ final class NewsController extends AbstractController
         NewsItemRepository $repo,
         HttpClientInterface $http,
         EntityManagerInterface $em,
-        PromptTemplateRepository $promptRepo
+        PromptTemplateRepository $promptRepo,
+        Request $request
     ): JsonResponse {
+        $debug = $request->query->get('debug');
+
         $start = microtime(true);
 
         $promptTemplate = $promptRepo->findOneBy([], ['id' => 'DESC']);
 
         $_question = json_encode($this->get_all_news($repo)) .' '. $promptTemplate->getTemplate();
+
+        if ($debug) {
+            return new JsonResponse([
+                'question_length' => strlen($_question),
+                'question' => $_question,
+            ]);
+        }
+
 //            '
 //            read all news here, analyze them,
 //            markets: dow audjpy audusd dxy fed interest rate
