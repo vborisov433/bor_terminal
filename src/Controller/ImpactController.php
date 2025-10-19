@@ -228,6 +228,10 @@ final class ImpactController extends AbstractController
             'fed interest rate decision' => 'Fed',
             'federal reserve interest rate expectations' => 'Fed',
             'fed interest rate outlook' => 'Fed',
+            'Fed interest rate expectations' => 'Fed',
+            'Fed Funds Rate' => 'Fed',
+            'Fed rate' => 'Fed',
+            'fed_rate' => 'Fed',
 
             'dxy' => 'US Dollar',
             'us dollar index' => 'US Dollar',
