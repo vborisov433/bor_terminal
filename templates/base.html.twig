@@ -34,20 +34,19 @@
         </a>
 
         <ul class="navbar-nav ms-auto">
+                <span id="autoRefreshCounter" class="nav-item  d-none d-md-flex align-items-center" style="margin-right: 5px;"
+                      title="Seconds until refresh">--</span>
 
-            <span id="autoRefreshCounter" class="nav-item d-flex align-items-center" style="margin-right: 5px;"
-                  title="Seconds until refresh">--</span>
+                <li class="nav-item d-none d-md-flex align-items-center">
+                    <div class="form-check form-switch mb-0" style="margin-right: 5px;">
+                        <input class="form-check-input me-2" type="checkbox" id="autoRefreshToggle">
+                        <label class="form-check-label text-secondary" id="autoRefreshLabel" for="autoRefreshToggle">
 
-            <li class="nav-item d-flex align-items-center">
-                <div class="form-check form-switch mb-0" style="margin-right: 5px;">
-                    <input class="form-check-input me-2" type="checkbox" id="autoRefreshToggle">
-                    <label class="form-check-label text-secondary" id="autoRefreshLabel" for="autoRefreshToggle">
+                            <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>
 
-                        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>
-
-                    </label>
-                </div>
-            </li>
+                        </label>
+                    </div>
+                </li>
 
             <li class="nav-item">
                 <a class="nav-link" href="{{ path('news_impact') }}" title="News Impact">
@@ -60,6 +59,7 @@
                 </a>
             </li>
         </ul>
+
     </div>
 </nav>
 
