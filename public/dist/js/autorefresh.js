@@ -89,7 +89,11 @@
 
         // Handle user toggle
         $toggle.on('change', function () {
-            applyState($(this).is(':checked'));
+            let checked = $(this).is(':checked');
+            if (checked){
+                ringBell(1);
+            }
+            applyState(checked);
         });
 
         // Clean up on nav away
@@ -104,8 +108,6 @@ function ringBell(times) {
     if (times === 0) return;
 
     const el = document.getElementById('newNewsAudio');
-
-    console.log('Ringing bell', el, 'times');
 
     if (el) {
         let remaining = times;
