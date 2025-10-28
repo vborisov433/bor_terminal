@@ -82,7 +82,7 @@
             'use strict';
 
             var STORAGE_KEY = 'bor.autoRefresh.enabled';
-            var PERIOD_SEC = 55;    // refresh period in seconds
+            var PERIOD_SEC = 6;    // refresh period in seconds
             var tickId = null;  // 1-second interval id
             var secondsLeft = PERIOD_SEC;
 
@@ -213,55 +213,63 @@
             }
         }
 
+        /** Audio unlock state machine */
+        let audioUnlock = {
+            unlocked: false,
+            attempting: false
+        };
 
-            let audioUnlocked = false;
+        /** Strict unlock: only run once, and only from a *trusted* user gesture. */
+        function unlockAudioOnce(event) {
+            // Reject if already unlocked or currently attempting
+            if (audioUnlock.unlocked || audioUnlock.attempting) return;
 
-            function unlockAudioOnce() {
-                if (audioUnlocked) return;
-                console.log('here1')
-                const el = document.getElementById('newNewsAudio');
-                if (!el) return;
+            // If called from an event, require a *trusted* user gesture
+            if (event && event.isTrusted !== true) return;
 
-                console.log('here2')
-                // el.play()
-                console.log('played')
-                // ringBell(2);
+            const el = document.getElementById('newNewsAudio');
+            if (!el) return;
 
-                // Try a muted play on the gesture; most browsers allow this.
-                el.muted = true;
-                el.play().then(() => {
-                    // el.pause();
-                    // el.currentTime = 0;
-                    el.muted = false;
-                    // audioUnlocked = true;
-                    console.log('Audio unlocked');
-                    removeListeners();
-                }).catch(() => {
-                    console.log('here3')
-                    // Even if muted play fails, many browsers still consider the page "active" after this gesture.
-                    audioUnlocked = true;
-                    removeListeners();
-                });
-            }
+            audioUnlock.attempting = true;
 
-            function removeListeners() {
-                document.removeEventListener('click', unlockAudioOnce);
-                document.removeEventListener('keydown', unlockAudioOnce);
-                document.removeEventListener('touchstart', unlockAudioOnce, {passive: true});
-            }
+            // Try muted play so most browsers accept it as a gesture unlock
+            el.muted = true;
+            el.play().then(() => {
 
-            document.addEventListener('click', unlockAudioOnce);
-            document.addEventListener('keydown', unlockAudioOnce);
-            document.addEventListener('touchstart', unlockAudioOnce, {passive: true});
+                console.log('Audio unlocked successfully');
 
-            // Optionally expose the status
-            window.isAudioUnlocked = () => audioUnlocked;
+                // Pause immediately, reset, unmute, mark unlocked
+                el.pause();
+                try { el.currentTime = 0; } catch (_) {}
+                el.muted = false;
+                audioUnlock.unlocked = true;
+            }).catch(() => {
+                // Even if muted play fails, do NOT mark unlocked
+            }).finally(() => {
+                audioUnlock.attempting = false;
+                // Remove the listeners after the first real attempt
+                removeAudioUnlockListeners();
+            });
+        }
 
+        /** Attach unlock listeners to real gestures, once */
+        function addAudioUnlockListeners() {
+            document.addEventListener('click', unlockAudioOnce, { once: true, passive: true });
+            document.addEventListener('keydown', unlockAudioOnce, { once: true });
+            document.addEventListener('touchstart', unlockAudioOnce, { once: true, passive: true });
+        }
 
-        $('#autoRefreshToggle').on('change', function () {
-            console.log('Auto-refresh toggled; attempting to unlock audio');
-            unlockAudioOnce()
-        });
+        function removeAudioUnlockListeners() {
+            document.removeEventListener('click', unlockAudioOnce, { passive: true });
+            document.removeEventListener('keydown', unlockAudioOnce);
+            document.removeEventListener('touchstart', unlockAudioOnce, { passive: true });
+        }
+
+        // Expose a safe checker (optional)
+        window.isAudioUnlocked = () => audioUnlock.unlocked;
+
+        // Install the one-time gesture listeners on load
+        addAudioUnlockListeners();
 
 
 
