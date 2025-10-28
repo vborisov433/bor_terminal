@@ -42,3 +42,22 @@ th{
     font-size: 12px;
     font-weight: bold;
 }
+
+
+
+/* Simple NEW row highlight */
+.news-row--new {
+    /* light background; uses Bootstrap vars when available */
+    background-color: rgba(13, 110, 253, 0.06); /* ~primary with low opacity */
+    border-left: 3px solid red;             /* Bootstrap primary */
+    transition: background-color .2s ease;
+}
+
+/* Slightly stronger on hover (still subtle) */
+.news-row--new:hover {
+    background-color: rgba(13, 110, 253, 0.10);
+}
+
+.dot--new {
+    background: red;
+}

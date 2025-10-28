@@ -16,6 +16,9 @@
     {% block stylesheets %}{% endblock %}
 </head>
 <body>
+
+<audio id="newNewsAudio" src="/sound/bell.wav" preload="auto"></audio>
+
 <nav class="navbar navbar-expand bg-primary navbar-dark mb-4 shadow">
     <div class="container">
         <a class="navbar-brand" href="{{ path('app_news') }}">📈 BOR Terminal
@@ -31,6 +34,20 @@
         </a>
 
         <ul class="navbar-nav ms-auto">
+
+            <span id="autoRefreshCounter" class="nav-item d-flex align-items-center" style="margin-right: 5px;"
+                  title="Seconds until refresh">--</span>
+
+            <li class="nav-item d-flex align-items-center">
+                <div class="form-check form-switch mb-0" style="margin-right: 5px;">
+                    <input class="form-check-input me-2" type="checkbox" id="autoRefreshToggle">
+                    <label class="form-check-label text-secondary" id="autoRefreshLabel" for="autoRefreshToggle">
+
+                        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>
+
+                    </label>
+                </div>
+            </li>
 
             <li class="nav-item">
                 <a class="nav-link" href="{{ path('news_impact') }}" title="News Impact">
@@ -59,6 +76,197 @@
     <script src="/dist/js/jquery-3.7.1.min.js"></script>
     <script src="/dist/js/timeago4.0.2.min.js"></script>
     <script src="/dist/js/bootstrap@5.3.3.min.js"></script>
+
+    <script>
+        (function ($, win, doc) {
+            'use strict';
+
+            var STORAGE_KEY = 'bor.autoRefresh.enabled';
+            var PERIOD_SEC = 6;    // refresh period in seconds
+            var tickId = null;  // 1-second interval id
+            var secondsLeft = PERIOD_SEC;
+
+            var $toggle, $label, $counter;
+
+            function pad2(n) {
+                return (n < 10 ? '0' : '') + n;
+            }
+
+            function setLabelColor(on) {
+                $label.toggleClass('text-secondary', !on)
+                    .toggleClass('text-white', on);
+            }
+
+            function setCounter(on) {
+                if (!on) {
+                    $counter.text('--')
+                        .removeClass('text-white')
+                        .addClass('text-white');
+                } else {
+                    $counter.text(pad2(secondsLeft))
+                        .removeClass('bg-light text-dark')
+                        .addClass('text-white');
+                }
+            }
+
+            function stopCountdown() {
+                if (tickId !== null) {
+                    win.clearInterval(tickId);
+                    tickId = null;
+                }
+            }
+
+            function tick() {
+                secondsLeft -= 1;
+                if (secondsLeft <= 0) {
+                    // Optional: set to 00 just before reload for visual consistency
+                    $counter.text('00');
+                    // Soft reload; change to true to attempt a hard reload (may be ignored by some browsers)
+                    win.location.reload();
+                    return;
+                }
+                setCounter(true);
+            }
+
+            function startCountdown() {
+                stopCountdown();
+                secondsLeft = PERIOD_SEC;
+                setCounter(true); // show "60"
+                tickId = win.setInterval(tick, 1000);
+            }
+
+            function applyState(on) {
+                // UI
+                $toggle.prop('checked', on);
+                setLabelColor(on);
+                setCounter(on);
+
+                // Persist
+                try {
+                    win.localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
+                } catch (e) {
+                }
+
+                // Timer
+                if (on) startCountdown(); else stopCountdown();
+            }
+
+            $(function () {
+                $toggle = $('#autoRefreshToggle');
+                $label = $('#autoRefreshLabel');
+                $counter = $('#autoRefreshCounter');
+
+                // Restore saved state
+                var saved = null;
+                try {
+                    saved = win.localStorage.getItem(STORAGE_KEY);
+                } catch (e) {
+                }
+                var enabled = (saved === '1');
+
+                // Apply on load
+                applyState(enabled);
+
+                // Handle user toggle
+                $toggle.on('change', function () {
+                    applyState($(this).is(':checked'));
+                });
+
+                // Clean up on nav away
+                $(win).on('beforeunload', stopCountdown);
+            });
+
+        })(jQuery, window, document);
+
+        function ringBell(times) {
+            // coerce to a positive integer
+            times = Math.max(0, parseInt(times, 10) || 0);
+            if (times === 0) return;
+
+            const el = document.getElementById('newNewsAudio');
+
+            console.log('Ringing bell', el, 'times');
+
+            if (el) {
+                let remaining = times;
+
+                const playNext = () => {
+                    if (remaining-- <= 0) return;
+
+                    // Reset playback head (in case the previous ring hasn't fully finished)
+                    try {
+                        el.currentTime = 0;
+                    } catch (e) {
+                    }
+
+                    el.play()
+                        .then(() => {
+                            // Play next ring after a short gap
+                            setTimeout(playNext, 400);
+                        })
+                        .catch((e) => {
+                            console.error('Failed to play audio', e);
+                        });
+                };
+
+                playNext();
+            }
+        }
+
+
+            let audioUnlocked = false;
+
+            function unlockAudioOnce() {
+                if (audioUnlocked) return;
+                console.log('here1')
+                const el = document.getElementById('newNewsAudio');
+                if (!el) return;
+
+                console.log('here2')
+                // el.play()
+                console.log('played')
+                // ringBell(2);
+
+                // Try a muted play on the gesture; most browsers allow this.
+                el.muted = true;
+                el.play().then(() => {
+                    // el.pause();
+                    // el.currentTime = 0;
+                    el.muted = false;
+                    // audioUnlocked = true;
+                    console.log('Audio unlocked');
+                    removeListeners();
+                }).catch(() => {
+                    console.log('here3')
+                    // Even if muted play fails, many browsers still consider the page "active" after this gesture.
+                    audioUnlocked = true;
+                    removeListeners();
+                });
+            }
+
+            function removeListeners() {
+                document.removeEventListener('click', unlockAudioOnce);
+                document.removeEventListener('keydown', unlockAudioOnce);
+                document.removeEventListener('touchstart', unlockAudioOnce, {passive: true});
+            }
+
+            document.addEventListener('click', unlockAudioOnce);
+            document.addEventListener('keydown', unlockAudioOnce);
+            document.addEventListener('touchstart', unlockAudioOnce, {passive: true});
+
+            // Optionally expose the status
+            window.isAudioUnlocked = () => audioUnlocked;
+
+
+        $('#autoRefreshToggle').on('change', function () {
+            console.log('Auto-refresh toggled; attempting to unlock audio');
+            unlockAudioOnce()
+        });
+
+
+
+    </script>
+
 
     {% block body %}{% endblock %}
 </main>

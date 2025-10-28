@@ -60,6 +60,8 @@
 
 
         <div class="table-responsive">
+
+
             <table class="table table-hover align-middle">
                 <thead class="table-primary">
                 <tr>
@@ -202,6 +204,8 @@
                 {% endfor %}
                 </tbody>
             </table>
+
+
         </div>
 
         {{ knp_pagination_render(pagination, '@KnpPaginator/Pagination/bootstrap_v5_pagination.html.twig') }}
@@ -297,5 +301,82 @@
                 }
             });
         });
+    </script>
+
+
+    <script>
+        (function ($, win) {
+            'use strict';
+
+            var STORAGE_KEY = 'bor.news.lastSeenId';
+
+            function getLastSeenId() {
+                var raw = win.localStorage.getItem(STORAGE_KEY);
+                var n = parseInt(raw, 10);
+                return Number.isFinite(n) ? n : 0;
+            }
+
+            function setLastSeenId(id) {
+                try { win.localStorage.setItem(STORAGE_KEY, String(id)); }
+                catch (e) { /* ignore quota/privacy errors */ }
+            }
+
+            $(function () {
+                var $rows = $('tr.news-toggle[data-news-id]');
+                if ($rows.length === 0) return;
+
+                var lastSeenId = getLastSeenId();
+                var maxIdOnPage = lastSeenId;
+
+                console.log($rows.length)
+
+                // ringBell(2);
+
+                let newCount = 0;
+
+                // 1) Walk rows, mark new if ID > lastSeenId and track the max ID
+                $rows.each(function () {
+                    var $tr = $(this);
+                    var id = parseInt($tr.data('news-id'), 10);
+                    if (!Number.isFinite(id)) return;
+
+                    if (id > maxIdOnPage) maxIdOnPage = id;
+
+                    if (id > lastSeenId) {
+                        newCount++;
+                        $tr.addClass('news-row--new');
+                        $tr.find('.dot').addClass('dot--new');
+                    }
+                });
+                console.log('newCount=', newCount);
+                if (newCount > 0){
+                    ringBell(2);
+                }
+
+
+                // 2) Auto-mark all currently visible as "seen" after a tiny delay
+                //    Next refresh will only highlight items with IDs > maxIdOnPage
+                if (maxIdOnPage > lastSeenId) {
+                    setTimeout(function () { setLastSeenId(maxIdOnPage); }, 150);
+                }
+
+                // --- OPTIONAL: Manual mark-read when a row is clicked/expanded ---
+                // If you prefer this behavior, uncomment the block below and remove the
+                // auto-mark block above (so highlights persist until user interacts).
+                /*
+                $(document).on('click', 'tr.news-toggle[data-news-id]', function () {
+                  var $tr = $(this);
+                  var id = parseInt($tr.data('news-id'), 10);
+                  if (!Number.isFinite(id)) return;
+
+                  var current = getLastSeenId();
+                  if (id > current) setLastSeenId(id);
+
+                  $tr.removeClass('news-row--new');
+                  $tr.find('.dot').removeClass('dot--new');
+                });
+                */
+            });
+        })(jQuery, window);
     </script>
 {% endblock %}
