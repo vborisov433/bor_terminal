@@ -33,11 +33,16 @@ final class NewsController extends AbstractController
     #[Route('/', name: 'app_news')]
     public function index(Request $request, NewsItemRepository $repo, PaginatorInterface $paginator, EntityManagerInterface $em): Response
     {
+        // 1. Setup Request
         $surpriseMin = $request->query->get('surprise_min');
         $impactMin = $request->query->get('impact_min');
         $page = max(1, (int)$request->query->get('page', 1));
         $limit = 12;
 
+        // Check if we are actually filtering
+        $hasFilters = is_numeric($surpriseMin) || is_numeric($impactMin);
+
+        // 2. Service Check (Lightweight)
         $serviceRepo = $em->getRepository(Service::class);
         $service = $serviceRepo->findOneBy(['name' => 'bornews']);
         $isBornewsOnline = false;
@@ -49,18 +54,31 @@ final class NewsController extends AbstractController
             }
         }
 
+        // 3. MAIN DATA QUERY
         $qb = $repo->createQueryBuilder('n')
-            ->leftJoin('n.articleInfo', 'a')->addSelect('a')
-            ->orderBy('a.id', 'DESC');
+            ->leftJoin('n.articleInfo', 'a')->addSelect('a');
 
-        if (is_numeric($surpriseMin)) {
-            $qb->andWhere('a.newsSurpriseIndex >= :surprise_min')
-                ->setParameter('surprise_min', (int)$surpriseMin);
+        // --- CRITICAL FIX START ---
+        if ($hasFilters) {
+            // CASE A: Filtering active.
+            // We MUST sort by 'a.id' so MySQL can use the same index for filtering AND sorting.
+            $qb->orderBy('a.id', 'DESC');
+
+            if (is_numeric($surpriseMin)) {
+                $qb->andWhere('a.newsSurpriseIndex >= :surprise_min')
+                    ->setParameter('surprise_min', (int)$surpriseMin);
+            }
+            if (is_numeric($impactMin)) {
+                $qb->andWhere('a.economyImpact >= :impact_min')
+                    ->setParameter('impact_min', (int)$impactMin);
+            }
+        } else {
+            // CASE B: No Filters (Default View).
+            // We MUST sort by 'n.id'. This allows MySQL to instantly scan the Primary Key
+            // of the main table and stop after 12 rows. No temporary table sorting needed.
+            $qb->orderBy('n.id', 'DESC');
         }
-        if (is_numeric($impactMin)) {
-            $qb->andWhere('a.economyImpact >= :impact_min')
-                ->setParameter('impact_min', (int)$impactMin);
-        }
+        // --- CRITICAL FIX END ---
 
         $query = $qb->getQuery();
         $query->setFirstResult(($page - 1) * $limit);
@@ -68,22 +86,33 @@ final class NewsController extends AbstractController
 
         $doctrinePaginator = new \Doctrine\ORM\Tools\Pagination\Paginator($query, false);
 
+        // 4. OPTIMIZED COUNT QUERY
+        // We reuse this logic to avoid running countAll() twice
         $countQb = $em->createQueryBuilder()
             ->select('count(a.id)')
             ->from(NewsArticleInfo::class, 'a');
 
-        if (is_numeric($surpriseMin)) {
-            $countQb->andWhere('a.newsSurpriseIndex >= :surprise_min')
-                ->setParameter('surprise_min', (int)$surpriseMin);
-        }
-        if (is_numeric($impactMin)) {
-            $countQb->andWhere('a.economyImpact >= :impact_min')
-                ->setParameter('impact_min', (int)$impactMin);
+        if ($hasFilters) {
+            if (is_numeric($surpriseMin)) {
+                $countQb->andWhere('a.newsSurpriseIndex >= :surprise_min')
+                    ->setParameter('surprise_min', (int)$surpriseMin);
+            }
+            if (is_numeric($impactMin)) {
+                $countQb->andWhere('a.economyImpact >= :impact_min')
+                    ->setParameter('impact_min', (int)$impactMin);
+            }
+            $totalItems = $countQb->getQuery()->getSingleScalarResult();
+            $totalNewsCount = $repo->countAll(); // Only run separate count if filtered
+        } else {
+            // If no filters, the "Total Pagination Items" IS the "Total News Count"
+            // We run one fast query instead of two.
+            $totalItems = $countQb->getQuery()->getSingleScalarResult();
+            $totalNewsCount = $totalItems;
         }
 
-        $totalItems = $countQb->getQuery()->getSingleScalarResult();
         $totalPages = ceil($totalItems / $limit);
 
+        // 5. First Date Query
         $firstNewsDate = $repo->createQueryBuilder('n')
             ->select('n.createdAt')
             ->orderBy('n.id', 'ASC')
@@ -97,7 +126,7 @@ final class NewsController extends AbstractController
             'total_pages' => $totalPages,
             'surprise_min' => $surpriseMin,
             'impact_min' => $impactMin,
-            'total_news_count' => $repo->countAll(),
+            'total_news_count' => $totalNewsCount,
             'first_news_date' => $firstNewsDate,
             'isBornewsOnline' => $isBornewsOnline,
         ]);
