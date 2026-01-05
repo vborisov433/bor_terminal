@@ -1,9 +1,11 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}BOR TERMINAL{% endblock %}
+
 {% block body %}
     <div class="container my-5">
 
+        {# --- HEADER / REFRESH BUTTON --- #}
         <div class="">
             <span class="float-end">
                 <button type="button" id="refresh-news-btn" class="btn btn-secondary btn-sm">
@@ -25,8 +27,8 @@
             </span>
         </div>
 
+        {# --- FILTERS --- #}
         <div class="d-flex mb-4 align-items-end flex-wrap gap-2">
-
             <form method="get" class="row g-3 flex-grow-1">
                 <div class="col-auto">
                     <label for="surprise_min" class="form-label mb-0">Surprise Index</label>
@@ -35,8 +37,8 @@
                            value="{{ surprise_min is not null ? surprise_min : 0 }}"
                            oninput="$('#surprise_min_value').text(this.value)">
                     <span id="surprise_min_value" class="badge bg-primary">
-                {{ surprise_min is not null ? surprise_min : 0 }}
-            </span>
+                        {{ surprise_min is not null ? surprise_min : 0 }}
+                    </span>
                 </div>
                 <div class="col-auto">
                     <label for="impact_min" class="form-label mb-0">Economy Impact</label>
@@ -45,35 +47,30 @@
                            value="{{ impact_min is not null ? impact_min : 0 }}"
                            oninput="$('#impact_min_value').text(this.value)">
                     <span id="impact_min_value" class="badge bg-primary">
-                {{ impact_min is not null ? impact_min : 0 }}
-            </span>
+                        {{ impact_min is not null ? impact_min : 0 }}
+                    </span>
                 </div>
                 <div class="col-auto align-self-end">
                     <button class="btn btn-primary" type="submit">Filter</button>
                     <a href="{{ path('app_news') }}" class="btn btn-outline-secondary">Reset</a>
-
                 </div>
             </form>
-
-
         </div>
 
-
+        {# --- NEWS TABLE --- #}
         <div class="table-responsive">
-
-
             <table class="table table-hover align-middle">
                 <thead class="table-primary">
                 <tr>
                     <th></th>
                     <th>Headline</th>
-                    <th class="text-center">Surprise<i class="icon1 bi bi-list-ol" aria-hidden="true"></i>
-                    </th>
+                    <th class="text-center">Surprise<i class="icon1 bi bi-list-ol" aria-hidden="true"></i></th>
                     <th class="text-center">Economy <i class="icon1 bi bi-list-ol" aria-hidden="true"></i></th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for news in pagination %}
+                    {# MAIN ROW #}
                     <tr class="news-toggle" style="cursor:pointer" data-news-id="{{ news.id }}">
                         <td><span class="dot"></span></td>
                         <td>
@@ -83,24 +80,18 @@
                                 </time>
                             </div>
                             <span class="headline {{ news.articleInfo is not defined or news.articleInfo is null or not news.articleInfo.hasMarketImpact ? 'text-muted' : 'fw-bold' }}">
-    {{ news.title }}
-</span>
+                                {{ news.title }}
+                            </span>
                         </td>
                         <td class="text-center">
-                            {% if news.articleInfo %}
-                                {{ news.articleInfo.newsSurpriseIndex ?? '-' }}
-                            {% else %}
-                                -
-                            {% endif %}
+                            {{ news.articleInfo.newsSurpriseIndex ?? '-' }}
                         </td>
                         <td class="text-center">
-                            {% if news.articleInfo %}
-                                {{ news.articleInfo.economyImpact ?? '-' }}
-                            {% else %}
-                                -
-                            {% endif %}
+                            {{ news.articleInfo.economyImpact ?? '-' }}
                         </td>
                     </tr>
+
+                    {# DETAILS ROW (Hidden by default) #}
                     <tr class="news-details-row" id="news-details-{{ news.id }}"
                         style="display:none; background: #f8f9fa;">
                         <td colspan="4">
@@ -122,9 +113,6 @@
                                             </button>
                                         </p>
                                         <strong>Heatmap:&nbsp;</strong>
-                                        {#                                        {% for word in news.articleInfo.macroKeywordHeatmap ?? [] %} #}
-                                        {#                                            <span class="badge bg-info text-dark me-1">{{ word }}</span> #}
-                                        {#                                        {% endfor %} #}
                                     </div>
                                 {% endif %}
 
@@ -161,25 +149,10 @@
                                                                     {{ market.sentiment }}
                                                                     </span>
                                                             {% endif %}
-
                                                         </div>
                                                     </td>
-
-
-                                                    {#                                                    <td> #}
-                                                    {#                                                        {% for kw in market.keywords %} #}
-                                                    {#                                                            <span class="badge bg-warning text-dark me-1">{{ kw }}</span> #}
-                                                    {#                                                        {% endfor %} #}
-                                                    {#                                                    </td> #}
-                                                    {#                                                    <td> #}
-                                                    {#                                                        {% for cat in market.categories %} #}
-                                                    {#                                                            <span class="badge bg-info text-dark me-1">{{ cat }}</span> #}
-                                                    {#                                                        {% endfor %} #}
-                                                    {#                                                    </td> #}
                                                 </tr>
                                                 <tr>
-                                                    {#                                                    <td class="market-reason" colspan="2">{{ market.reason }}</td> #}
-
                                                     <td class="summary d-flex justify-content-between align-items-start"
                                                         colspan="2">
                                                         <span id="tts-reason-{{ loop.index }}-{{ market.id }}">{{ market.reason }}</span>
@@ -187,7 +160,6 @@
                                                                 class="btn btn-sm btn-outline-secondary ms-2 btn-speaker">
                                                             <i class="bi bi-volume-up"></i></button>
                                                     </td>
-
                                                 </tr>
                                             {% endfor %}
                                             </tbody>
@@ -204,62 +176,84 @@
                 {% endfor %}
                 </tbody>
             </table>
+        </div>
 
+        {# --- NEW MANUAL PAGINATION --- #}
+        {# This replaces {{ knp_pagination_render(...) }} #}
+        <div class="d-flex justify-content-center mt-4 mb-5 align-items-center">
+
+            {# PREVIOUS BUTTON #}
+            {% if current_page > 1 %}
+                <a href="{{ path('app_news', app.request.query.all|merge({'page': current_page - 1})) }}"
+                   class="btn btn-outline-primary me-2">
+                    &laquo;
+                </a>
+            {% else %}
+                <button class="btn btn-outline-secondary me-2" disabled>&laquo; </button>
+            {% endif %}
+
+            {# PAGE INFO #}
+            <span class="fw-bold mx-3">
+               {{ current_page }} of {{ total_pages }}
+            </span>
+
+            {# NEXT BUTTON #}
+            {% if current_page < total_pages %}
+                <a href="{{ path('app_news', app.request.query.all|merge({'page': current_page + 1})) }}"
+                   class="btn btn-outline-primary ms-2">
+                     &raquo;
+                </a>
+            {% else %}
+                <button class="btn btn-outline-secondary ms-2" disabled> &raquo;</button>
+            {% endif %}
 
         </div>
 
-        {{ knp_pagination_render(pagination, '@KnpPaginator/Pagination/bootstrap_v5_pagination.html.twig') }}
-
     </div>
-
 {% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
 
     <script>
-
         let currentUtterance = null;
 
         function speakText(elementId) {
             const synth = window.speechSynthesis;
-
-            // If already speaking, stop and reset
             if (synth.speaking || synth.pending) {
                 synth.cancel();
                 currentUtterance = null;
                 return;
             }
-
             const element = document.getElementById(elementId);
             if (!element) return;
-
             const text = element.textContent || element.innerText;
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
-
             currentUtterance = utterance;
             synth.speak(utterance);
         }
 
         $(function () {
+            // Toggle Details Row
             $('.news-toggle').on('click', function () {
                 var id = $(this).data('news-id');
-                // Optionally: close others
                 $('.news-details-row').not('#news-details-' + id).hide();
                 $('#news-details-' + id).toggle();
             });
 
+            // Initialize timeago
             timeago.render(document.querySelectorAll('.timeago'));
 
+            // Refresh Button Logic
             $('#refresh-news-btn').on('click', function (e) {
                 e.preventDefault();
                 var $btn = $(this);
                 var $spinner = $btn.find('.refresh-spinner');
                 var $icon = $btn.find('.bi-arrow-clockwise');
 
-                $spinner.removeClass('d-none');     // Show spinner
-                $icon.addClass('d-none');           // Hide refresh icon
+                $spinner.removeClass('d-none');
+                $icon.addClass('d-none');
                 $btn.attr('disabled', true);
 
                 $.ajax({
@@ -268,30 +262,21 @@
                     headers: {'X-Requested-With': 'XMLHttpRequest'},
                     success: function (response) {
                         setTimeout(() => {
-                            location.reload(); // reload after success
+                            location.reload();
                         }, 2000);
                     },
                     error: function () {
-                        $spinner.addClass('d-none');    // Hide spinner on error
-                        $icon.removeClass('d-none');    // Show icon again
+                        $spinner.addClass('d-none');
+                        $icon.removeClass('d-none');
                         $btn.attr('disabled', false);
                         alert('Failed to refresh news. Please try again.');
                     }
                 });
             });
 
-            $('.pagination .page-link').each(function () {
-                const text = $(this).text().trim();
-                if (text.includes('Previous')) {
-                    $(this).html('«');
-                } else if (text.includes('Next')) {
-                    $(this).html('»');
-                }
-            });
-
+            // Keyboard Shortcuts
             $(document).on('keydown', function (e) {
                 if (e.key.toLowerCase() === 'r') {
-                    // Prevent browser's default refresh (Ctrl+R/F5)
                     e.preventDefault();
                     location.href = window.location.pathname + window.location.search;
                 }
@@ -307,7 +292,6 @@
         // Highlight new news items since last visit
         (function ($, win) {
             'use strict';
-
             var STORAGE_KEY = 'bor.news.lastSeenId';
 
             function getLastSeenId() {
@@ -318,7 +302,7 @@
 
             function setLastSeenId(id) {
                 try { win.localStorage.setItem(STORAGE_KEY, String(id)); }
-                catch (e) { /* ignore quota/privacy errors */ }
+                catch (e) {}
             }
 
             $(function () {
@@ -327,10 +311,8 @@
 
                 var lastSeenId = getLastSeenId();
                 var maxIdOnPage = lastSeenId;
-
                 let newCount = 0;
 
-                // 1) Walk rows, mark new if ID > lastSeenId and track the max ID
                 $rows.each(function () {
                     var $tr = $(this);
                     var id = parseInt($tr.data('news-id'), 10);
@@ -344,15 +326,14 @@
                         $tr.find('.dot').addClass('dot--new');
                     }
                 });
-                console.log('newCount=', newCount);
-                if (newCount > 0){
+
+                if (newCount > 0 && typeof ringBell === "function"){
                     ringBell(1);
                 }
 
                 if (maxIdOnPage > lastSeenId) {
                     setTimeout(function () { setLastSeenId(maxIdOnPage); }, 150);
                 }
-
             });
         })(jQuery, window);
     </script>

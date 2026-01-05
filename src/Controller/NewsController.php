@@ -3,12 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\MarketSummary;
+use App\Entity\NewsArticleInfo;
 use App\Entity\PromptTemplate;
 use App\Entity\Service;
 use App\Repository\MarketSummaryRepository;
 use App\Repository\NewsItemRepository;
 use App\Repository\PromptTemplateRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use DOMDocument;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -22,6 +24,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class NewsController extends AbstractController
@@ -31,12 +35,13 @@ final class NewsController extends AbstractController
     {
         $surpriseMin = $request->query->get('surprise_min');
         $impactMin = $request->query->get('impact_min');
-        $page = max(1, (int)$request->query->get('page', 1)); // current page number
+        $page = max(1, (int)$request->query->get('page', 1));
+        $limit = 12;
 
         $serviceRepo = $em->getRepository(Service::class);
         $service = $serviceRepo->findOneBy(['name' => 'bornews']);
-
         $isBornewsOnline = false;
+
         if ($service && $service->getLastSeen()) {
             $tenMinutesAgo = new \DateTime('-10 minutes');
             if ($service->getLastSeen() > $tenMinutesAgo) {
@@ -46,8 +51,7 @@ final class NewsController extends AbstractController
 
         $qb = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
-            ->leftJoin('n.marketAnalyses', 'm')->addSelect('m')
-            ->orderBy('n.id', 'DESC');
+            ->orderBy('a.id', 'DESC');
 
         if (is_numeric($surpriseMin)) {
             $qb->andWhere('a.newsSurpriseIndex >= :surprise_min')
@@ -58,12 +62,27 @@ final class NewsController extends AbstractController
                 ->setParameter('impact_min', (int)$impactMin);
         }
 
-        $pagination = $paginator->paginate(
-            $qb,
-            $page,
-            12, // items per page
-            ['wrap-queries' => true]
-        );
+        $query = $qb->getQuery();
+        $query->setFirstResult(($page - 1) * $limit);
+        $query->setMaxResults($limit);
+
+        $doctrinePaginator = new \Doctrine\ORM\Tools\Pagination\Paginator($query, false);
+
+        $countQb = $em->createQueryBuilder()
+            ->select('count(a.id)')
+            ->from(NewsArticleInfo::class, 'a');
+
+        if (is_numeric($surpriseMin)) {
+            $countQb->andWhere('a.newsSurpriseIndex >= :surprise_min')
+                ->setParameter('surprise_min', (int)$surpriseMin);
+        }
+        if (is_numeric($impactMin)) {
+            $countQb->andWhere('a.economyImpact >= :impact_min')
+                ->setParameter('impact_min', (int)$impactMin);
+        }
+
+        $totalItems = $countQb->getQuery()->getSingleScalarResult();
+        $totalPages = ceil($totalItems / $limit);
 
         $firstNewsDate = $repo->createQueryBuilder('n')
             ->select('n.createdAt')
@@ -73,7 +92,9 @@ final class NewsController extends AbstractController
             ->getSingleScalarResult();
 
         return $this->render('news/index.html.twig', [
-            'pagination' => $pagination,
+            'pagination' => $doctrinePaginator,
+            'current_page' => $page,
+            'total_pages' => $totalPages,
             'surprise_min' => $surpriseMin,
             'impact_min' => $impactMin,
             'total_news_count' => $repo->countAll(),
@@ -81,7 +102,6 @@ final class NewsController extends AbstractController
             'isBornewsOnline' => $isBornewsOnline,
         ]);
     }
-
 
     #[Route('/news/refresh', name: 'app_news_refresh', methods: ['POST'])]
     public function refresh(KernelInterface $kernel, Request $request): JsonResponse
@@ -101,7 +121,7 @@ final class NewsController extends AbstractController
     #[Route('/news/all', name: 'app_news_all', methods: ['GET'])]
     public function getAllNews(Request $request, NewsItemRepository $repo): JsonResponse
     {
-        $limit = (int) $request->query->get('limit', 20); // default to 20 if not provided
+        $limit = (int)$request->query->get('limit', 20); // default to 20 if not provided
 
         $newsItems = $repo->createQueryBuilder('n')
             ->leftJoin('n.articleInfo', 'a')->addSelect('a')
@@ -146,7 +166,7 @@ final class NewsController extends AbstractController
 //            ];
 //        }, $newsItems);
 
-        $data = array_map(fn($i)=>implode('|',[
+        $data = array_map(fn($i) => implode('|', [
 //            $i->getId(),
             $i->getTitle(),
             $i->getLink(),
@@ -166,7 +186,7 @@ final class NewsController extends AbstractController
             $i->marketAnalysesToString()
 //            implode(',', array_map(fn($ma) => $ma->getMarket().' '.$ma->getSentiment(), $i->getMarketAnalyses()->toArray()))
 
-        ]),$newsItems);
+        ]), $newsItems);
 
         return new JsonResponse($data);
     }
@@ -186,37 +206,37 @@ final class NewsController extends AbstractController
 
         $newsItems = array_slice($newsItems, 0, $LIMIT_ARTICLES);
 
-/*
-        $data = array_map(fn($i)=>implode('|',[
-//            $i->getId(),
-            $i->getTitle(),
-            $i->getLink(),
-//            $i->getDate()?->format('Y-m-d'),
-//            $i->getGptAnalysis(),
-//            $i->isAnalyzed(),
-//            $i->isCompleted(),
-//            $i->getCreatedAt()?->format('Y-m-d H:i:s'),
-            $i->getArticleInfo()?->toString(),
-//            $info?$info->hasMarketImpact():'',
-//            $info?$info->getTitleHeadline():'',
-//            $info?$info->getNewsSurpriseIndex():'',
-//            $info?$info->getEconomyImpact():'',
-            implode(',', array_map(fn($item) => is_scalar($item) ? $item : json_encode($item), $i->getArticleInfo()?->getMacroKeywordHeatmap() ?? [])),
-            $i->getArticleInfo()?->getSummary(),
-            $i->marketAnalysesToString()
-//            implode(',', array_map(fn($ma) => $ma->getMarket().' '.$ma->getSentiment(), $i->getMarketAnalyses()->toArray()))
+        /*
+                $data = array_map(fn($i)=>implode('|',[
+        //            $i->getId(),
+                    $i->getTitle(),
+                    $i->getLink(),
+        //            $i->getDate()?->format('Y-m-d'),
+        //            $i->getGptAnalysis(),
+        //            $i->isAnalyzed(),
+        //            $i->isCompleted(),
+        //            $i->getCreatedAt()?->format('Y-m-d H:i:s'),
+                    $i->getArticleInfo()?->toString(),
+        //            $info?$info->hasMarketImpact():'',
+        //            $info?$info->getTitleHeadline():'',
+        //            $info?$info->getNewsSurpriseIndex():'',
+        //            $info?$info->getEconomyImpact():'',
+                    implode(',', array_map(fn($item) => is_scalar($item) ? $item : json_encode($item), $i->getArticleInfo()?->getMacroKeywordHeatmap() ?? [])),
+                    $i->getArticleInfo()?->getSummary(),
+                    $i->marketAnalysesToString()
+        //            implode(',', array_map(fn($ma) => $ma->getMarket().' '.$ma->getSentiment(), $i->getMarketAnalyses()->toArray()))
 
-        ]),$newsItems);
-*/
+                ]),$newsItems);
+        */
 
-        $data = array_map(function($i) {
+        $data = array_map(function ($i) {
             return [
-                'title'        => $i->getTitle(),
-                'link'         => $i->getLink(),
+                'title' => $i->getTitle(),
+                'link' => $i->getLink(),
                 'article_info' => $i->getArticleInfo()?->toString(),
-                'macro_heatmap'=> $i->getArticleInfo()
+                'macro_heatmap' => $i->getArticleInfo()
                         ?->getMacroKeywordHeatmap() ?? [],
-                'summary'      => $i->getArticleInfo()?->getSummary(),
+                'summary' => $i->getArticleInfo()?->getSummary(),
                 'market_analysis' => $i->marketAnalysesToString()
             ];
         }, $newsItems);
@@ -230,14 +250,15 @@ final class NewsController extends AbstractController
         return $data;
     }
 
-    #[Route('/market-summary', name: 'api_news_market_summary', methods: ['GET','POST'])]
+    #[Route('/market-summary', name: 'api_news_market_summary', methods: ['GET', 'POST'])]
     public function marketSummary(
-        Request $request,
-        MarketSummaryRepository $summaryRepo,
+        Request                  $request,
+        MarketSummaryRepository  $summaryRepo,
         PromptTemplateRepository $promptRepo,
-        EntityManagerInterface $em,
+        EntityManagerInterface   $em,
 
-    ): Response {
+    ): Response
+    {
         $id = $request->query->get('id');
 
         $promptTemplate = $promptRepo->findOneBy([], ['id' => 'DESC']);
@@ -298,12 +319,13 @@ final class NewsController extends AbstractController
 
     #[Route('/api/market-summary', name: 'api_market_summary_json', methods: ['GET'])]
     public function marketSummaryJson(
-        NewsItemRepository $repo,
-        HttpClientInterface $http,
-        EntityManagerInterface $em,
+        NewsItemRepository       $repo,
+        HttpClientInterface      $http,
+        EntityManagerInterface   $em,
         PromptTemplateRepository $promptRepo,
-        Request $request
-    ): JsonResponse {
+        Request                  $request
+    ): JsonResponse
+    {
         $debug = $request->query->get('debug');
 
         $start = microtime(true);
@@ -343,13 +365,13 @@ final class NewsController extends AbstractController
 //            in card What To Watch in the markets
         //response Total characters < 5000,
 
-        $_question =preg_replace('/\s+/', ' ', trim($_question));
+        $_question = preg_replace('/\s+/', ' ', trim($_question));
 
 //        dd(strlen($_question));
 //        dd($_question);
 
         $question = [
-            'question' =>  $_question
+            'question' => $_question
         ];
 
         $maxRetries = 2;
@@ -384,7 +406,7 @@ final class NewsController extends AbstractController
                 $summary = new MarketSummary();
                 $summary->setHtmlResult($html);
                 $summary->setCreatedAt(new \DateTimeImmutable());
-                $timeLoaded = (int) round(microtime(true) - $start);
+                $timeLoaded = (int)round(microtime(true) - $start);
                 $summary->setTimeLoaded($timeLoaded);
                 $em->persist($summary);
                 $em->flush();
