@@ -61,7 +61,8 @@ final class NewsController extends AbstractController
         $pagination = $paginator->paginate(
             $qb,
             $page,
-            12 // items per page
+            12, // items per page
+            ['wrap-queries' => true]
         );
 
         $firstNewsDate = $repo->createQueryBuilder('n')
