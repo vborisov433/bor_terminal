@@ -192,13 +192,13 @@ def ask_gpt():
             return jsonify({"error": "Invalid JSON"}), 400
 
         user_prompt = data.get('prompt')
-        print(f"[DEBUG] [API] Prompt received: {user_prompt}")
+        # Limit log length to avoid clutter
+        print(f"[DEBUG] [API] Prompt received: {str(user_prompt)[:100]}...")
 
         if not user_prompt:
             return jsonify({"error": "No prompt provided"}), 400
 
         # Reuse the existing logic to process the request
-        # We use a ThreadPool to keep it async-safe inside Flask
         print("[DEBUG] [API] Delegating to worker thread...")
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(run_async_gemini_task, user_prompt)
@@ -215,8 +215,16 @@ def ask_gpt():
         })
 
     except Exception as e:
-        print(f"[ERROR] [API] Unexpected error: {e}")
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        print("\n[CRITICAL FLASK ERROR]")
+        traceback.print_exc()  # <--- This prints the exact line number to your console
+
+        # Return the trace to PHP so you see it in the browser too
+        return jsonify({
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }), 500
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
