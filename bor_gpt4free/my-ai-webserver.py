@@ -225,7 +225,7 @@ def ask_gpt():
         user_prompt = data.get('prompt') or data.get('question')
 
         # Limit log length to avoid clutter
-        print(f"[DEBUG] [API] Prompt received: {str(user_prompt)[:100]}...")
+        print(f"[DEBUG] [API] Prompt received.")
 
         if not user_prompt:
             return jsonify({"error": "No prompt provided"}), 400
