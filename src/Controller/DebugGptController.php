@@ -82,6 +82,7 @@ class DebugGptController extends AbstractController
     #[Route('/test', name: 'debug_analyze_gpt', methods: ['GET'])]
     public function debug(): JsonResponse
     {
+        $startTime = microtime(true);
         $logs = [];
         $logs[] = 'Starting Debug Process...';
 
@@ -192,6 +193,7 @@ TEXT;
             }
 
             $logs[] = 'JSON successfully parsed.';
+
         } catch (\Throwable $e) {
             return $this->json([
                 'status' => 'parsing_error',
@@ -221,6 +223,10 @@ TEXT;
                 'logs' => $logs
             ], 500);
         }
+
+        $endTime = microtime(true);
+        $executionTime = round($endTime - $startTime, 4); // Round to 4 decimal places
+        $logs[] = "Process finished in {$executionTime} seconds.";
 
         return $this->json([
             'status' => 'success',
