@@ -7,6 +7,7 @@ import time
 from flask import Flask, request, render_template_string, jsonify
 from threading import Lock
 
+# [LOGGING CLEANUP]
 try:
     from loguru import logger
     logger.disable("gemini_webapi")
@@ -21,36 +22,29 @@ gemini_src_path = os.path.join(current_dir, 'Gemini-API', 'src')
 
 if os.path.exists(gemini_src_path):
     sys.path.append(gemini_src_path)
-    print(f"[DEBUG] Added to python path: {gemini_src_path}")
 else:
-    print(f"[ERROR] Could not find folder: {gemini_src_path}")
-    print("Please check if you cloned the repo correctly.")
+    print(f"[CRITICAL] Missing folder: {gemini_src_path}")
     sys.exit(1)
 
-# [SETUP] IMPORT CLIENT AND APPLY FIXES
+# [SETUP] IMPORT CLIENT
 try:
     try:
         from enum import StrEnum
     except ImportError:
         from enum import Enum
-        class StrEnum(str, Enum):
-            pass
+        class StrEnum(str, Enum): pass
 
     from gemini_webapi import GeminiClient
     import gemini_webapi.utils
-
-    # [FIX] Disable auto-loading of browser cookies
     gemini_webapi.utils.load_browser_cookies = lambda: {}
-
-    print("[DEBUG] Successfully imported GeminiClient and disabled browser scanning!")
 except ImportError as e:
-    print(f"[CRITICAL ERROR] Import failed: {e}")
+    print(f"[CRITICAL] Import failed: {e}")
     sys.exit(1)
 
 app = Flask(__name__)
 
 # ==================================================================================
-# [CONFIG] FILE SETTINGS
+# [CONFIG]
 # ==================================================================================
 COOKIE_FILE = "gemini_cookies.json"
 DEFAULT_TIMEOUT = 120
@@ -93,157 +87,110 @@ HTML_TEMPLATE = '''
 '''
 
 def run_async_gemini_task(question):
-    """
-    Runs the Async Gemini Client in a fresh event loop for this thread.
-    """
-    print(f"\n[DEBUG] --- Starting Gemini Task ---")
+    """ Runs the Gemini Client in a fresh event loop. """
 
-    # 1. Load Cookies
+    # Minimal Log: Task Start
+    print(f"[TASK] Processing ...")
+
     if not os.path.exists(COOKIE_FILE):
-        return "Error: 'gemini_cookies.json' not found."
+        return "Error: 'gemini_cookies.json' missing."
 
     try:
         with open(COOKIE_FILE, 'r') as f:
-            raw_data = json.load(f)
-        if isinstance(raw_data, list):
-            file_cookies = {c['name']: c['value'] for c in raw_data if 'name' in c and 'value' in c}
-        else:
-            file_cookies = raw_data
+            raw = json.load(f)
+        file_cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
     except Exception as e:
-        return f"Error reading cookie file: {e}"
+        return f"Error reading cookies: {e}"
 
     cookie_1psid = file_cookies.get("__Secure-1PSID")
     cookie_1psidts = file_cookies.get("__Secure-1PSIDTS")
 
     if not cookie_1psid:
-        return "Error: __Secure-1PSID missing from cookie file."
+        return "Error: Missing __Secure-1PSID."
 
-    # 2. Define the async workflow as a single function
-    #    This ensures 'client' is opened and closed within the SAME loop cycle.
     async def task_workflow():
         client = None
         try:
-            print("[DEBUG] Initializing GeminiClient...")
-            client = GeminiClient(
-                secure_1psid=cookie_1psid,
-                secure_1psidts=cookie_1psidts,
-            )
-
-            # Inject cookies
+            client = GeminiClient(secure_1psid=cookie_1psid, secure_1psidts=cookie_1psidts)
             for k, v in file_cookies.items():
-                if k not in client.cookies:
-                    client.cookies[k] = v
+                if k not in client.cookies: client.cookies[k] = v
 
-            print("[DEBUG] Connecting (Init)...")
             await client.init(timeout=30)
-
-            print("[DEBUG] Generating Content...")
             response = await client.generate_content(question)
             return response.text
 
         except Exception as e:
-            # We catch the exception inside the async task to return it safely
             return f"ERROR_INTERNAL: {str(e)}"
-
         finally:
-            # Ensure client is closed before we leave the loop
-            if client:
-                print("[DEBUG] Closing Gemini client...")
-                await client.close()
+            if client: await client.close()
 
-    # 3. Create a fresh event loop for this thread and run the task
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    start = time.time()
 
-    start_time = time.time()
     try:
         result = loop.run_until_complete(task_workflow())
+        elapsed = time.time() - start
+        print(f"[TASK] Completed in {elapsed:.2f}s") # Minimal Log: Task End
         return result
     except Exception as e:
-        return f"Error executing loop: {e}"
+        return f"Loop Error: {e}"
     finally:
         loop.close()
-        elapsed = time.time() - start_time
-        print(f"[DEBUG] --- Task finished in {elapsed:.2f} seconds ---")
 
-
-# Global variables for rate limiting
+# Rate Limiting
 request_timestamps = []
 request_lock = Lock()
-
-RATE_LIMIT_QUOTA = 3    # requests
-RATE_LIMIT_WINDOW = 20  # seconds
+RATE_QUOTA = 3
+RATE_WINDOW = 20
 
 @app.route('/api/ask-gpt', methods=['POST'])
 def ask_gpt():
     global request_timestamps
 
-    print("\n[DEBUG] [API] Received POST request at /api/ask-gpt")
+    # Minimal Log: Incoming Request
+    print("\n[API] POST /api/ask-gpt")
 
-    # ==============================================================================
-    # [RATE LIMIT CHECK]
-    # ==============================================================================
     with request_lock:
-        current_time = time.time()
-        # Filter timestamps: Keep only those within the last 20 seconds
-        request_timestamps = [t for t in request_timestamps if t > (current_time - RATE_LIMIT_WINDOW)]
+        now = time.time()
+        request_timestamps = [t for t in request_timestamps if t > (now - RATE_WINDOW)]
 
-        if len(request_timestamps) >= RATE_LIMIT_QUOTA:
-            # Calculate wait time based on the oldest request in the current window
-            oldest_time = request_timestamps[0]
-            wait_time = int(RATE_LIMIT_WINDOW - (current_time - oldest_time)) + 1
+        if len(request_timestamps) >= RATE_QUOTA:
+            wait = int(RATE_WINDOW - (now - request_timestamps[0])) + 1
+            print(f"[LIMIT] Throttled. Wait {wait}s") # Minimal Log: Limit Hit
+            return jsonify({"status": "error", "message": f"Rate limit. Wait {wait}s", "wait_seconds": wait}), 429
 
-            msg = f"Rate limit active. Please wait {wait_time} seconds."
-            print(f"[WARN] [API] {msg}")
-            return jsonify({
-                "status": "error",
-                "message": msg,
-                "wait_seconds": wait_time
-            }), 429
-
-        request_timestamps.append(current_time)
-    # ==============================================================================
+        request_timestamps.append(now)
 
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "Invalid JSON"}), 400
+        prompt = data.get('prompt') or data.get('question')
 
-        user_prompt = data.get('prompt') or data.get('question')
-        if not user_prompt:
-            return jsonify({"error": "No prompt provided"}), 400
+        if not prompt:
+            print("[API] Error: No prompt")
+            return jsonify({"error": "No prompt"}), 400
 
-        print("[DEBUG] [API] Delegating to worker thread...")
-
-        # Create a fresh thread for the task
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(run_async_gemini_task, user_prompt)
+            future = executor.submit(run_async_gemini_task, prompt)
             bot_response = future.result(timeout=DEFAULT_TIMEOUT)
 
         if bot_response.startswith("Error") or "ERROR_INTERNAL" in bot_response:
-             print(f"[ERROR] [API] Task failed: {bot_response}")
+             print(f"[API] Worker Failed: {bot_response[:50]}...")
              return jsonify({"status": "error", "message": bot_response}), 500
 
-        return jsonify({
-            "status": "success",
-            "response": bot_response,
-            "answer": bot_response
-        })
+        return jsonify({"status": "success", "response": bot_response, "answer": bot_response})
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        print(f"[API] Critical: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    answer = ""
-    error = ""
-    question = ""
+    answer, error, question = "", "", ""
 
     if request.method == 'POST':
         question = request.form['question']
-        print(f"\n[DEBUG] [WEB] Received form submission...")
+        print(f"\n[WEB] Prompt: {question[:30]}...")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(run_async_gemini_task, question)
@@ -253,10 +200,10 @@ def index():
                     error = answer
                     answer = ""
             except Exception as e:
-                error = f"Server Timeout or Error: {str(e)}"
+                error = f"Timeout/Error: {str(e)}"
 
     return render_template_string(HTML_TEMPLATE, answer=answer, question=question, error=error)
 
 if __name__ == '__main__':
-    print("[DEBUG] Starting Flask server on 0.0.0.0:5000...")
+    print("[SYS] Server running at http://0.0.0.0:5000")
     app.run(host='0.0.0.0', debug=True, port=5000)
