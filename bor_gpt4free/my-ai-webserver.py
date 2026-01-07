@@ -143,48 +143,61 @@ def run_async_gemini_task(question):
         return f"Loop Error: {e}"
     finally:
         loop.close()
-
-# Rate Limiting
+# --- Configuration ---
 request_timestamps = []
 request_lock = Lock()
 RATE_QUOTA = 3
 RATE_WINDOW = 20
+DEFAULT_TIMEOUT = 30
+
 @app.route('/api/ask-gpt', methods=['POST'])
 def ask_gpt():
     global request_timestamps
 
-    # Minimal Log: Incoming Request
+    # 1. Minimal Log: Incoming Request
     print("\n[API] POST /api/ask-gpt")
 
+    # 2. Rate Limiting Logic
     with request_lock:
         now = time.time()
+        # Filter out timestamps older than the window
         request_timestamps = [t for t in request_timestamps if t > (now - RATE_WINDOW)]
 
         if len(request_timestamps) >= RATE_QUOTA:
             wait = int(RATE_WINDOW - (now - request_timestamps[0])) + 1
             print(f"[LIMIT] Throttled. Wait {wait}s")
-            return jsonify({"status": "error", "message": f"Rate limit. Wait {wait}s", "wait_seconds": wait}), 429
+            return jsonify({
+                "status": "error",
+                "message": f"Rate limit exceeded. Please wait {wait}s.",
+                "wait_seconds": wait
+            }), 429
 
         request_timestamps.append(now)
 
-    # Initialize variables for debug safety
+    # 3. Initialize variables for debug safety
     raw_data = "<No Data>"
     prompt = "<Prompt Not Parsed>"
 
     try:
-        # Capture raw data immediately so we have it if JSON parsing fails
+        # Capture raw data immediately for debugging context
         raw_data = request.get_data(as_text=True)
 
-        data = request.json
-        if not data:
-            return jsonify({"error": "Invalid or Empty JSON"}), 400
+        # Attempt to parse JSON
+        # If the user sends invalid JSON, request.json might be None or raise 400
+        data = request.get_json(silent=True)
+
+        if data is None:
+            print(f"[API] Error: Invalid JSON received. Raw: {raw_data[:50]}...")
+            return jsonify({"error": "Invalid JSON format"}), 400
 
         prompt = data.get('prompt') or data.get('question')
 
         if not prompt:
-            print("[API] Error: No prompt")
-            return jsonify({"error": "No prompt"}), 400
+            print("[API] Error: No prompt provided in JSON")
+            return jsonify({"error": "Missing 'prompt' or 'question' field"}), 400
 
+        # Run the heavy task
+        # Note: Ensure run_async_gemini_task is synchronous or wrapped correctly
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(run_async_gemini_task, prompt)
             bot_response = future.result(timeout=DEFAULT_TIMEOUT)
@@ -195,29 +208,39 @@ def ask_gpt():
 
         return jsonify({"status": "success", "response": bot_response, "answer": bot_response})
 
+    # 4. CRITICAL EXCEPTION HANDLER
     except Exception as e:
-            error_trace = traceback.format_exc()
+        error_trace = traceback.format_exc()
 
-            print("\n[API] !!! CRITICAL EXCEPTION !!!")
-            print(f"Error Type: {type(e).__name__}")
-            print(f"Error Message: {str(e)}")
+        print("\n" + "="*30)
+        print(" [API] !!! CRITICAL EXCEPTION !!!")
+        print("="*30)
+        print(f"Error Type:    {type(e).__name__}")
+        print(f"Error Message: {str(e)}")
+        print("-" * 30)
+        print(" [FAILED PROMPT / DATA] ")
 
-            # [FIX] PRINT THE PROMPT THAT CAUSED THE ERROR
-            print("--- FAILED PROMPT ---")
-            print(prompt if prompt != "<Prompt Not Parsed>" else f"RAW DATA: {raw_data}")
-            print("---------------------")
+        # Logic to print whatever we managed to capture
+        if prompt != "<Prompt Not Parsed>":
+            print(f"> PROMPT: {prompt}")
+        else:
+            print(f"> RAW DATA (JSON Fail): {raw_data}")
 
-            print("--- Stack Trace ---")
-            print(error_trace)
-            print("-------------------")
+        print("-" * 30)
+        print(" [STACK TRACE] ")
+        print(error_trace)
+        print("="*30 + "\n")
 
-            return jsonify({
-                "status": "error",
-                "message": "Internal Server Error",
-                "debug_error": str(e),
-                "debug_prompt": prompt, # Returning it in JSON helps debug via Postman too
-                "debug_trace": error_trace.splitlines()
-            }), 500
+        # Return a JSON useful for API consumers (like Postman)
+        return jsonify({
+            "status": "error",
+            "message": "Internal Server Error",
+            "debug_info": {
+                "error_type": type(e).__name__,
+                "input_captured": prompt if prompt != "<Prompt Not Parsed>" else raw_data
+            }
+        }), 500
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
