@@ -1,3 +1,4 @@
+import traceback  # <--- ADD THIS AT THE TOP
 import sys
 import os
 import concurrent.futures
@@ -6,6 +7,7 @@ import json
 import time
 from flask import Flask, request, render_template_string, jsonify
 from threading import Lock
+
 
 # [LOGGING CLEANUP]
 # try:
@@ -181,8 +183,24 @@ def ask_gpt():
         return jsonify({"status": "success", "response": bot_response, "answer": bot_response})
 
     except Exception as e:
-        print(f"[API] Critical: {e}")
-        return jsonify({"error": str(e)}), 500
+            # 1. Capture the full stack trace
+            error_trace = traceback.format_exc()
+
+            # 2. Print detailed logs to the console
+            print("\n[API] !!! CRITICAL EXCEPTION !!!")
+            print(f"Error Type: {type(e).__name__}")
+            print(f"Error Message: {str(e)}")
+            print("--- Stack Trace ---")
+            print(error_trace)
+            print("-------------------")
+
+            # 3. Return the error (Optionally include trace in dev mode, but hide in prod)
+            return jsonify({
+                "status": "error",
+                "message": "Internal Server Error",
+                "debug_error": str(e), # Helpful for now
+                "debug_trace": error_trace.splitlines() # Returns trace to Postman/Frontend for easy reading
+            }), 500
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
