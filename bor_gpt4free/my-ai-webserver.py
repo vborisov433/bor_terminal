@@ -191,7 +191,8 @@ def ask_gpt():
             print("[ERROR] [API] No JSON data received")
             return jsonify({"error": "Invalid JSON"}), 400
 
-        user_prompt = data.get('prompt')
+        user_prompt = data.get('prompt') or data.get('question')
+
         # Limit log length to avoid clutter
         print(f"[DEBUG] [API] Prompt received: {str(user_prompt)[:100]}...")
 
