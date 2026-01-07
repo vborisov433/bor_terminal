@@ -111,7 +111,9 @@ class DebugGptController extends AbstractController
 
         // 2. Prepare the Question
         $question = <<<TEXT
-from NEWS: 
+from NEWS title: 
+{$newsItem->getTitle()}
+from NEWS content: 
 {$newsItem->getContent()}
 
 for markets: dow , audjpy , audusd , dxy , fed interest rate

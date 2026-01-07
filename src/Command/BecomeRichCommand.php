@@ -129,7 +129,9 @@ class BecomeRichCommand extends Command
 
         foreach ($newItems as $newsItem) {
             $question = <<<TEXT
-from NEWS: 
+from NEWS title: 
+{$newsItem->getTitle()}
+from NEWS content: 
 {$newsItem->getContent()}
 
 for markets: dow , audjpy , audusd , dxy , fed interest rate
