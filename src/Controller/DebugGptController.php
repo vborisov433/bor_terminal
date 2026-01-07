@@ -19,6 +19,66 @@ class DebugGptController extends AbstractController
         private HttpClientInterface $http
     ) {}
 
+    #[Route('/reset-analysis', name: 'debug_reset_analysis', methods: ['GET'])]
+    public function resetAnalysis(): JsonResponse
+    {
+        $logs = [];
+        $logs[] = 'Starting Analysis Reset for the last 30 days...';
+
+        $dateThreshold = (new \DateTimeImmutable())->modify('-30 days');
+        $logs[] = 'Date threshold set to: ' . $dateThreshold->format('Y-m-d H:i:s');
+
+        try {
+            // 1. Delete MarketAnalysis
+            $deletedMarketAnalysis = $this->em->createQuery(
+                'DELETE App\Entity\MarketAnalysis m 
+                 WHERE m.newsItem IN (
+                     SELECT n.id FROM App\Entity\NewsItem n WHERE n.date >= :date
+                 )'
+            )->setParameter('date', $dateThreshold)->execute();
+
+            $logs[] = "Deleted {$deletedMarketAnalysis} MarketAnalysis records.";
+
+            // 2. Delete NewsArticleInfo
+            $deletedArticleInfo = $this->em->createQuery(
+                'DELETE App\Entity\NewsArticleInfo i 
+                 WHERE i.newsItem IN (
+                     SELECT n.id FROM App\Entity\NewsItem n WHERE n.date >= :date
+                 )'
+            )->setParameter('date', $dateThreshold)->execute();
+
+            $logs[] = "Deleted {$deletedArticleInfo} NewsArticleInfo records.";
+
+            // 3. Reset NewsItem flags
+            $updatedNewsItems = $this->em->createQuery(
+                'UPDATE App\Entity\NewsItem n 
+                 SET n.analyzed = false, n.completed = false, n.gptAnalysis = null 
+                 WHERE n.date >= :date'
+            )->setParameter('date', $dateThreshold)->execute();
+
+            $logs[] = "Reset flags for {$updatedNewsItems} NewsItem records.";
+
+            return $this->json([
+                'status' => 'success',
+                'message' => 'Analysis data reset successfully.',
+                'stats' => [
+                    'market_analysis_deleted' => $deletedMarketAnalysis,
+                    'article_info_deleted' => $deletedArticleInfo,
+                    'news_items_reset' => $updatedNewsItems,
+                ],
+                'logs' => $logs
+            ]);
+
+        } catch (\Throwable $e) {
+            return $this->json([
+                'status' => 'error',
+                'message' => 'Failed to reset analysis data.',
+                'error' => $e->getMessage(),
+                'logs' => $logs
+            ], 500);
+        }
+    }
+
     #[Route('/test', name: 'debug_analyze_gpt', methods: ['GET'])]
     public function debug(): JsonResponse
     {
