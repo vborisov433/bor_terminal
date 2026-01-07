@@ -1,4 +1,4 @@
-import traceback  # <--- ADD THIS AT THE TOP
+import traceback  # <--- ADDED AS REQUESTED
 import sys
 import os
 import concurrent.futures
@@ -7,14 +7,6 @@ import json
 import time
 from flask import Flask, request, render_template_string, jsonify
 from threading import Lock
-
-
-# [LOGGING CLEANUP]
-# try:
-#     from loguru import logger
-#     logger.disable("gemini_webapi")
-# except ImportError:
-#     pass
 
 # ==================================================================================
 # [SETUP] PATH CONFIGURATION
@@ -118,10 +110,22 @@ def run_async_gemini_task(question):
                 if k not in client.cookies: client.cookies[k] = v
 
             await client.init(timeout=30)
+
+            # --- DEBUGGING "FAILED TO GENERATE CONTENTS" ---
             response = await client.generate_content(question)
-            return response.text
+
+            # The library raises ValueError when accessing .text if payload is empty/invalid
+            try:
+                return response.text
+            except ValueError:
+                # If we get here, Google returned a 200 OK but refused to give content (Safety/Cookies)
+                print(f"[Gemini] ValueError: Content generation failed.")
+                print(f"[Gemini] Response Metadata: {response.__dict__}") # Log available metadata
+                return "Error: Google refused to generate content (ValueError). This usually means your cookies are stale or the prompt triggered a safety filter."
 
         except Exception as e:
+            # Capture library specific errors
+            print(f"[Gemini Internal Error] {str(e)}")
             return f"ERROR_INTERNAL: {str(e)}"
         finally:
             if client: await client.close()
@@ -165,7 +169,14 @@ def ask_gpt():
         request_timestamps.append(now)
 
     try:
+        # Debug: Check raw data in case of parsing errors
+        raw_data = request.get_data(as_text=True)
+        # print(f"[API] Raw Payload: {raw_data}")
+
         data = request.json
+        if not data:
+            return jsonify({"error": "Invalid or Empty JSON"}), 400
+
         prompt = data.get('prompt') or data.get('question')
 
         if not prompt:
