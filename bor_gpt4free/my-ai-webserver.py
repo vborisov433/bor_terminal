@@ -5,6 +5,7 @@ import asyncio
 import json
 import time
 from flask import Flask, request, render_template_string, jsonify
+from threading import Lock
 
 # ==================================================================================
 # [SETUP] PATH CONFIGURATION
@@ -182,9 +183,39 @@ def run_async_gemini_task(question):
     print(f"[DEBUG] --- Task finished in {elapsed:.2f} seconds ---")
     return response_text
 
+
+# Global variables for rate limiting
+last_request_time = 0
+request_lock = Lock()
+RATE_LIMIT_SECONDS = 17
+
 @app.route('/api/ask-gpt', methods=['POST'])
 def ask_gpt():
+    global last_request_time
+
     print("\n[DEBUG] [API] Received POST request at /api/ask-gpt")
+
+    # ==============================================================================
+    # [RATE LIMIT CHECK]
+    # ==============================================================================
+    with request_lock:
+        current_time = time.time()
+        elapsed = current_time - last_request_time
+
+        if elapsed < RATE_LIMIT_SECONDS:
+            wait_time = int(RATE_LIMIT_SECONDS - elapsed)
+            msg = f"Rate limit active. Please wait {wait_time} seconds."
+            print(f"[WARN] [API] {msg}")
+            return jsonify({
+                "status": "error",
+                "message": msg,
+                "wait_seconds": wait_time
+            }), 429  # HTTP 429 Too Many Requests
+
+        # Update the timestamp immediately to block subsequent requests
+        last_request_time = current_time
+    # ==============================================================================
+
     try:
         data = request.json
         if not data:
@@ -210,15 +241,17 @@ def ask_gpt():
              return jsonify({"status": "error", "message": bot_response}), 500
 
         print("[DEBUG] [API] Success! Sending JSON response.")
+
         return jsonify({
             "status": "success",
-            "response": bot_response
+            "response": bot_response,
+            "answer": bot_response
         })
 
     except Exception as e:
         import traceback
         print("\n[CRITICAL FLASK ERROR]")
-        traceback.print_exc()  # <--- This prints the exact line number to your console
+        traceback.print_exc()
 
         # Return the trace to PHP so you see it in the browser too
         return jsonify({
