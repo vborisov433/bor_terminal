@@ -152,6 +152,8 @@ TEXT;
             $logs[] = "API Response Code: $statusCode";
 
             if ($statusCode !== 200) {
+
+                dd($question);
                 // [FIX 2] readable error reporting
                 $msg = $data['message'] ?? $data['error'] ?? 'Error';
                 return $this->json([
