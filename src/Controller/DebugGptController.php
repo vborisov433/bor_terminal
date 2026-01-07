@@ -144,8 +144,7 @@ TEXT;
         try {
             // Note: Use a short timeout for debug endpoint so it fails fast if server is down
             $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt', [
-                'json' => ['prompt' => $question], // Changed 'question' to 'prompt' to match standard flask naming, revert if your python uses 'question'
-                'timeout' => 30,
+                'json' => ['prompt' => $question]
             ]);
 
             $statusCode = $response->getStatusCode();

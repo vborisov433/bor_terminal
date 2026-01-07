@@ -7,6 +7,12 @@ import time
 from flask import Flask, request, render_template_string, jsonify
 from threading import Lock
 
+try:
+    from loguru import logger
+    logger.disable("gemini_webapi")
+except ImportError:
+    pass
+
 # ==================================================================================
 # [SETUP] PATH CONFIGURATION
 # ==================================================================================
@@ -23,7 +29,6 @@ else:
 
 # [SETUP] IMPORT CLIENT AND APPLY FIXES
 try:
-    # Handle Python 3.10 Enum issue manually if needed
     try:
         from enum import StrEnum
     except ImportError:
@@ -34,13 +39,12 @@ try:
     from gemini_webapi import GeminiClient
     import gemini_webapi.utils
 
-    # [FIX] Disable auto-loading of browser cookies to stop Permission Denied errors
+    # [FIX] Disable auto-loading of browser cookies
     gemini_webapi.utils.load_browser_cookies = lambda: {}
 
     print("[DEBUG] Successfully imported GeminiClient and disabled browser scanning!")
 except ImportError as e:
     print(f"[CRITICAL ERROR] Import failed: {e}")
-    print("Try running: pip install -r Gemini-API/requirements.txt")
     sys.exit(1)
 
 app = Flask(__name__)
@@ -90,108 +94,89 @@ HTML_TEMPLATE = '''
 
 def run_async_gemini_task(question):
     """
-    Runs the Async Gemini Client in a synchronous wrapper using cookies from file.
+    Runs the Async Gemini Client in a fresh event loop for this thread.
     """
-    print(f"\n[DEBUG] --- Starting Gemini Task for: {question[:30]}... ---")
+    print(f"\n[DEBUG] --- Starting Gemini Task ---")
 
-    # 0. Load Cookies from File
+    # 1. Load Cookies
     if not os.path.exists(COOKIE_FILE):
-        print(f"[ERROR] Cookie file '{COOKIE_FILE}' not found.")
-        return "Error: 'gemini_cookies.json' not found. Please create it with your cookies."
+        return "Error: 'gemini_cookies.json' not found."
 
     try:
-        print(f"[DEBUG] Reading cookies from {COOKIE_FILE}...")
         with open(COOKIE_FILE, 'r') as f:
             raw_data = json.load(f)
-
-        # [FIX] Handle List vs Dictionary
         if isinstance(raw_data, list):
             file_cookies = {c['name']: c['value'] for c in raw_data if 'name' in c and 'value' in c}
         else:
             file_cookies = raw_data
-
-        print(f"[DEBUG] Loaded {len(file_cookies)} cookies from file.")
-
     except Exception as e:
-        print(f"[ERROR] Failed to read cookie file: {e}")
         return f"Error reading cookie file: {e}"
 
-    # Extract critical cookies variables
     cookie_1psid = file_cookies.get("__Secure-1PSID")
     cookie_1psidts = file_cookies.get("__Secure-1PSIDTS")
 
     if not cookie_1psid:
-        print("[ERROR] __Secure-1PSID is missing.")
         return "Error: __Secure-1PSID missing from cookie file."
 
-    # Start Async Loop
+    # 2. Define the async workflow as a single function
+    #    This ensures 'client' is opened and closed within the SAME loop cycle.
+    async def task_workflow():
+        client = None
+        try:
+            print("[DEBUG] Initializing GeminiClient...")
+            client = GeminiClient(
+                secure_1psid=cookie_1psid,
+                secure_1psidts=cookie_1psidts,
+            )
+
+            # Inject cookies
+            for k, v in file_cookies.items():
+                if k not in client.cookies:
+                    client.cookies[k] = v
+
+            print("[DEBUG] Connecting (Init)...")
+            await client.init(timeout=30)
+
+            print("[DEBUG] Generating Content...")
+            response = await client.generate_content(question)
+            return response.text
+
+        except Exception as e:
+            # We catch the exception inside the async task to return it safely
+            return f"ERROR_INTERNAL: {str(e)}"
+
+        finally:
+            # Ensure client is closed before we leave the loop
+            if client:
+                print("[DEBUG] Closing Gemini client...")
+                await client.close()
+
+    # 3. Create a fresh event loop for this thread and run the task
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    response_text = ""
-    client = None
     start_time = time.time()
-
     try:
-        # 1. Initialize Client
-        print("[DEBUG] Initializing GeminiClient object...")
-        client = GeminiClient(
-            secure_1psid=cookie_1psid,
-            secure_1psidts=cookie_1psidts,
-        )
-
-        # 2. Inject ALL cookies
-        for k, v in file_cookies.items():
-            if k not in client.cookies:
-                client.cookies[k] = v
-
-        # 3. Perform Handshake (init)
-        print("[DEBUG] Connecting to Google Gemini API (init)...")
-        loop.run_until_complete(client.init(timeout=30))
-        print("[DEBUG] Connection established successfully.")
-
-        # 4. Generate Content
-        print(f"[DEBUG] Sending prompt to API...")
-        response = loop.run_until_complete(client.generate_content(question))
-        response_text = response.text
-        print(f"[DEBUG] Response received! Length: {len(response_text)} chars.")
-
+        result = loop.run_until_complete(task_workflow())
+        return result
     except Exception as e:
-        error_msg = str(e)
-        print(f"[ERROR] Exception during API call: {error_msg}")
-
-        if "cookie" in error_msg.lower() or "auth" in error_msg.lower():
-            response_text = (
-                f"AUTHENTICATION ERROR: Google rejected the cookies.\n"
-                f"Please refresh your 'gemini_cookies.json' file.\n"
-                f"Details: {error_msg}"
-            )
-        else:
-            response_text = f"Error executing request: {error_msg}"
-
+        return f"Error executing loop: {e}"
     finally:
-        # 5. Cleanup
-        if client:
-            try:
-                print("[DEBUG] Closing Gemini client connection...")
-                loop.run_until_complete(asyncio.wait_for(client.close(), timeout=2))
-            except:
-                pass
         loop.close()
-
-    elapsed = time.time() - start_time
-    print(f"[DEBUG] --- Task finished in {elapsed:.2f} seconds ---")
-    return response_text
+        elapsed = time.time() - start_time
+        print(f"[DEBUG] --- Task finished in {elapsed:.2f} seconds ---")
 
 
 # Global variables for rate limiting
-last_request_time = 0
+request_timestamps = []
 request_lock = Lock()
-RATE_LIMIT_SECONDS = 17
+
+RATE_LIMIT_QUOTA = 3    # requests
+RATE_LIMIT_WINDOW = 20  # seconds
 
 @app.route('/api/ask-gpt', methods=['POST'])
 def ask_gpt():
-    global last_request_time
+    global request_timestamps
 
     print("\n[DEBUG] [API] Received POST request at /api/ask-gpt")
 
@@ -200,47 +185,44 @@ def ask_gpt():
     # ==============================================================================
     with request_lock:
         current_time = time.time()
-        elapsed = current_time - last_request_time
+        # Filter timestamps: Keep only those within the last 20 seconds
+        request_timestamps = [t for t in request_timestamps if t > (current_time - RATE_LIMIT_WINDOW)]
 
-        if elapsed < RATE_LIMIT_SECONDS:
-            wait_time = int(RATE_LIMIT_SECONDS - elapsed)
+        if len(request_timestamps) >= RATE_LIMIT_QUOTA:
+            # Calculate wait time based on the oldest request in the current window
+            oldest_time = request_timestamps[0]
+            wait_time = int(RATE_LIMIT_WINDOW - (current_time - oldest_time)) + 1
+
             msg = f"Rate limit active. Please wait {wait_time} seconds."
             print(f"[WARN] [API] {msg}")
             return jsonify({
                 "status": "error",
                 "message": msg,
                 "wait_seconds": wait_time
-            }), 429  # HTTP 429 Too Many Requests
+            }), 429
 
-        # Update the timestamp immediately to block subsequent requests
-        last_request_time = current_time
+        request_timestamps.append(current_time)
     # ==============================================================================
 
     try:
         data = request.json
         if not data:
-            print("[ERROR] [API] No JSON data received")
             return jsonify({"error": "Invalid JSON"}), 400
 
         user_prompt = data.get('prompt') or data.get('question')
-
-        # Limit log length to avoid clutter
-        print(f"[DEBUG] [API] Prompt received.")
-
         if not user_prompt:
             return jsonify({"error": "No prompt provided"}), 400
 
-        # Reuse the existing logic to process the request
         print("[DEBUG] [API] Delegating to worker thread...")
+
+        # Create a fresh thread for the task
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(run_async_gemini_task, user_prompt)
             bot_response = future.result(timeout=DEFAULT_TIMEOUT)
 
-        if bot_response.startswith("Error") or "AUTHENTICATION ERROR" in bot_response:
+        if bot_response.startswith("Error") or "ERROR_INTERNAL" in bot_response:
              print(f"[ERROR] [API] Task failed: {bot_response}")
              return jsonify({"status": "error", "message": bot_response}), 500
-
-        print("[DEBUG] [API] Success! Sending JSON response.")
 
         return jsonify({
             "status": "success",
@@ -250,15 +232,8 @@ def ask_gpt():
 
     except Exception as e:
         import traceback
-        print("\n[CRITICAL FLASK ERROR]")
         traceback.print_exc()
-
-        # Return the trace to PHP so you see it in the browser too
-        return jsonify({
-            "error": str(e),
-            "trace": traceback.format_exc()
-        }), 500
-
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -268,20 +243,16 @@ def index():
 
     if request.method == 'POST':
         question = request.form['question']
-        print(f"\n[DEBUG] [WEB] Received form submission: {question[:30]}...")
+        print(f"\n[DEBUG] [WEB] Received form submission...")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(run_async_gemini_task, question)
             try:
                 answer = future.result(timeout=DEFAULT_TIMEOUT)
-                if answer.startswith("Error") or "AUTHENTICATION ERROR" in answer:
-                    print(f"[WARN] [WEB] Displaying error to user: {answer}")
+                if answer.startswith("Error") or "ERROR_INTERNAL" in answer:
                     error = answer
                     answer = ""
-                else:
-                    print("[DEBUG] [WEB] Rendering success response.")
             except Exception as e:
-                print(f"[ERROR] [WEB] Timeout or critical failure: {e}")
                 error = f"Server Timeout or Error: {str(e)}"
 
     return render_template_string(HTML_TEMPLATE, answer=answer, question=question, error=error)
