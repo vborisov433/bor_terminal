@@ -141,7 +141,7 @@ TEXT;
 
         // 3. Call External API
         $logs[] = 'Attempting to call http://localhost:5000/api/ask-gpt...';
-        try {
+
             // Note: Use a short timeout for debug endpoint so it fails fast if server is down
             $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt', [
                 'json' => ['prompt' => $question],
@@ -153,11 +153,11 @@ TEXT;
 
             if ($statusCode !== 200) {
                 // [FIX 2] readable error reporting
-                $msg = $data['message'] ?? $data['error'] ?? 'Unknown Error';
+                $msg = $data['message'] ?? $data['error'] ?? 'Error';
                 return $this->json([
                     'status' => 'api_rejected',
                     'http_code' => $statusCode,
-                    'message' => "Python API refused request: $msg",
+                    'message' => $msg,
                     'logs' => $logs
                 ], $statusCode);
             }
@@ -181,16 +181,6 @@ TEXT;
                 throw new \RuntimeException('API response did not contain "answer" or "response" key.');
             }
 
-        } catch (\Throwable $e) {
-            return $this->json([
-                'status' => 'api_error',
-                'step' => 'External API Call',
-                'error' => $e->getMessage(),
-                'news_item_id' => $newsItem->getId(),
-                'logs' => $logs
-            ], 502);
-        }
-
         // 4. Parse JSON Logic
         try {
             $start = strpos($answer, '{');
@@ -210,6 +200,7 @@ TEXT;
             $logs[] = 'JSON successfully parsed.';
 
         } catch (\Throwable $e) {
+
             return $this->json([
                 'status' => 'parsing_error',
                 'step' => 'JSON Extraction',

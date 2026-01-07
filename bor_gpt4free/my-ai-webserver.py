@@ -149,7 +149,6 @@ request_timestamps = []
 request_lock = Lock()
 RATE_QUOTA = 3
 RATE_WINDOW = 20
-
 @app.route('/api/ask-gpt', methods=['POST'])
 def ask_gpt():
     global request_timestamps
@@ -163,15 +162,18 @@ def ask_gpt():
 
         if len(request_timestamps) >= RATE_QUOTA:
             wait = int(RATE_WINDOW - (now - request_timestamps[0])) + 1
-            print(f"[LIMIT] Throttled. Wait {wait}s") # Minimal Log: Limit Hit
+            print(f"[LIMIT] Throttled. Wait {wait}s")
             return jsonify({"status": "error", "message": f"Rate limit. Wait {wait}s", "wait_seconds": wait}), 429
 
         request_timestamps.append(now)
 
+    # Initialize variables for debug safety
+    raw_data = "<No Data>"
+    prompt = "<Prompt Not Parsed>"
+
     try:
-        # Debug: Check raw data in case of parsing errors
+        # Capture raw data immediately so we have it if JSON parsing fails
         raw_data = request.get_data(as_text=True)
-        # print(f"[API] Raw Payload: {raw_data}")
 
         data = request.json
         if not data:
@@ -189,28 +191,32 @@ def ask_gpt():
 
         if bot_response.startswith("Error") or "ERROR_INTERNAL" in bot_response:
              print(f"[API] Worker Failed: {bot_response[:50]}...")
-             return jsonify({"status": "error", "message": bot_response}), 500
+             return jsonify({"status": "error", "message": "Worker Failed"}), 500
 
         return jsonify({"status": "success", "response": bot_response, "answer": bot_response})
 
     except Exception as e:
-            # 1. Capture the full stack trace
             error_trace = traceback.format_exc()
 
-            # 2. Print detailed logs to the console
             print("\n[API] !!! CRITICAL EXCEPTION !!!")
             print(f"Error Type: {type(e).__name__}")
             print(f"Error Message: {str(e)}")
+
+            # [FIX] PRINT THE PROMPT THAT CAUSED THE ERROR
+            print("--- FAILED PROMPT ---")
+            print(prompt if prompt != "<Prompt Not Parsed>" else f"RAW DATA: {raw_data}")
+            print("---------------------")
+
             print("--- Stack Trace ---")
             print(error_trace)
             print("-------------------")
 
-            # 3. Return the error (Optionally include trace in dev mode, but hide in prod)
             return jsonify({
                 "status": "error",
                 "message": "Internal Server Error",
-                "debug_error": str(e), # Helpful for now
-                "debug_trace": error_trace.splitlines() # Returns trace to Postman/Frontend for easy reading
+                "debug_error": str(e),
+                "debug_prompt": prompt, # Returning it in JSON helps debug via Postman too
+                "debug_trace": error_trace.splitlines()
             }), 500
 
 @app.route('/', methods=['GET', 'POST'])
