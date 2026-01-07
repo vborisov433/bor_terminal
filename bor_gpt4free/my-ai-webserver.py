@@ -8,11 +8,11 @@ from flask import Flask, request, render_template_string, jsonify
 from threading import Lock
 
 # [LOGGING CLEANUP]
-try:
-    from loguru import logger
-    logger.disable("gemini_webapi")
-except ImportError:
-    pass
+# try:
+#     from loguru import logger
+#     logger.disable("gemini_webapi")
+# except ImportError:
+#     pass
 
 # ==================================================================================
 # [SETUP] PATH CONFIGURATION
