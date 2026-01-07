@@ -144,21 +144,37 @@ TEXT;
         try {
             // Note: Use a short timeout for debug endpoint so it fails fast if server is down
             $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt', [
-                'json' => ['prompt' => $question]
+                'json' => ['prompt' => $question],
+                'timeout' => 120,
             ]);
 
             $statusCode = $response->getStatusCode();
             $logs[] = "API Response Code: $statusCode";
 
             if ($statusCode !== 200) {
-                throw new \RuntimeException('API returned non-200 status code: ' . $statusCode);
+                // [FIX 2] readable error reporting
+                $msg = $data['message'] ?? $data['error'] ?? 'Unknown Error';
+                return $this->json([
+                    'status' => 'api_rejected',
+                    'http_code' => $statusCode,
+                    'message' => "Python API refused request: $msg",
+                    'logs' => $logs
+                ], $statusCode);
             }
 
-            $data = $response->toArray();
+            $data = $response->toArray(false);
             $logs[] = 'API Raw Response received.';
 
             // Handle different API response structures (e.g. 'answer' vs 'response')
             $answer = $data['answer'] ?? $data['response'] ?? '';
+
+            if (str_starts_with($answer, 'Error') || str_contains($answer, 'AUTHENTICATION ERROR')) {
+                return $this->json([
+                    'status' => 'python_logic_error',
+                    'message' => $answer,
+                    'logs' => $logs
+                ], 500);
+            }
 
             if (empty($answer)) {
                 $logs[] = "Full API Response dump: " . json_encode($data);
