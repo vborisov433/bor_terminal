@@ -1,55 +1,74 @@
 import sys
 import os
 import concurrent.futures
-import logging
-import time # Added for timing debugs
+import asyncio
+import json
+from flask import Flask, request, render_template_string
 
-# Path setup
-sys.path.append(os.path.join(os.path.dirname(__file__), 'gpt4free'))
+# ==================================================================================
+# [SETUP] PATH CONFIGURATION
+# ==================================================================================
+current_dir = os.path.dirname(os.path.abspath(__file__))
+gemini_src_path = os.path.join(current_dir, 'Gemini-API', 'src')
 
-from flask import Flask, request, render_template_string, jsonify
-from g4f.client import Client
+if os.path.exists(gemini_src_path):
+    sys.path.append(gemini_src_path)
+    print(f"[DEBUG] Added to python path: {gemini_src_path}")
+else:
+    print(f"[ERROR] Could not find folder: {gemini_src_path}")
+    print("Please check if you cloned the repo correctly.")
+    sys.exit(1)
+
+# [SETUP] IMPORT CLIENT AND APPLY FIXES
+try:
+    from gemini_webapi import GeminiClient
+    import gemini_webapi.utils
+
+    # [FIX] Disable auto-loading of browser cookies to stop Permission Denied errors
+    # We overwrite the function with an empty lambda so it does nothing.
+    gemini_webapi.utils.load_browser_cookies = lambda: {}
+
+    print("[DEBUG] Successfully imported GeminiClient and disabled browser scanning!")
+except ImportError as e:
+    print(f"[CRITICAL ERROR] Import failed: {e}")
+    print("Try running: pip install -r Gemini-API/requirements.txt")
+    sys.exit(1)
 
 app = Flask(__name__)
-client = Client()
 
-DEFAULT_TIMEOUT = 220
-DEFAULT_PROVIDER = "blackboxai"
-DEFAULT_MODEL = ""
+# ==================================================================================
+# [CONFIG] FILE SETTINGS
+# ==================================================================================
+COOKIE_FILE = "gemini_cookies.json" # Ensure this file exists with your JSON content
+DEFAULT_TIMEOUT = 120
 
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>GPT4Free Chat</title>
+    <title>Gemini Web Chat</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 <div class="container py-5">
-    <h2 class="mb-4">🤖 GPT4Free Chat</h2>
+    <h2 class="mb-4">🤖 Gemini Web Chat</h2>
     <form method="post">
         <div class="mb-3">
             <label for="question" class="form-label">Enter your question:</label>
             <textarea name="question" id="question" class="form-control" rows="6" required>{{ question }}</textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Ask GPT</button>
+        <button type="submit" class="btn btn-primary">Ask Gemini</button>
     </form>
-
     {% if answer or error %}
     <div class="mt-5">
-        <h4>💡 GPT Response:</h4>
+        <h4>💡 Response:</h4>
         <div class="card shadow-sm {{ 'border-danger' if error else 'border-success' }}">
             <div class="card-body">
                 {% if error %}
-                  <p class="text-danger mb-3">{{ error }}</p>
-                  <form method="get">
-                      <button type="submit" class="btn btn-outline-secondary">
-                          Reload
-                      </button>
-                  </form>
+                  <p class="text-danger">{{ error }}</p>
                 {% else %}
-                  <pre class="mb-0" style="white-space: pre-wrap;">{{ answer }}</pre>
+                  <pre style="white-space: pre-wrap;">{{ answer }}</pre>
                 {% endif %}
             </div>
         </div>
@@ -60,60 +79,86 @@ HTML_TEMPLATE = '''
 </html>
 '''
 
-def ask_gpt_dynamic(question, model):
-    print(f"\n[DEBUG] --- ask_gpt_dynamic started ---")
-    print(f"[DEBUG] Requested Model: {model}")
-    print(f"[DEBUG] Input Question Length: {len(question)} chars")
-
-    chunks = split_text_into_chunks(question)
-    print(f"[DEBUG] Text split into {len(chunks)} chunk(s).")
-
-    # Prepare messages from chunks
-    messages = [{"role": "user", "content": chunk} for chunk in chunks]
-
-    print(f"[DEBUG] Sending request to Provider: {DEFAULT_PROVIDER}...")
-    start_time = time.time()
+def run_async_gemini_task(question):
+    """
+    Runs the Async Gemini Client in a synchronous wrapper using cookies from file.
+    """
+    # 0. Load Cookies from File
+    if not os.path.exists(COOKIE_FILE):
+        return "Error: 'gemini_cookies.json' not found. Please create it with your cookies."
 
     try:
-        # Note: I changed model=DEFAULT_MODEL to model=model so the API argument works
-        response = client.chat.completions.create(
-            messages=messages,
-            web_search=False
-        )
-        elapsed = time.time() - start_time
-        print(f"[DEBUG] Response received in {elapsed:.2f} seconds.")
+        with open(COOKIE_FILE, 'r') as f:
+            raw_data = json.load(f)
 
-        content = response.choices[0].message.content
-        print(f"[DEBUG] Response content length: {len(content)} chars")
-        return content
+        # [FIX] Handle List vs Dictionary
+        # If the JSON is a list (from Chrome export), flatten it to {name: value}
+        if isinstance(raw_data, list):
+            file_cookies = {c['name']: c['value'] for c in raw_data if 'name' in c and 'value' in c}
+        else:
+            file_cookies = raw_data
 
     except Exception as e:
-        print(f"[DEBUG] !!! Error inside ask_gpt_dynamic: {e}")
-        raise e
+        return f"Error reading cookie file: {e}"
 
+    # Extract critical cookies variables from the loaded dictionary
+    cookie_1psid = file_cookies.get("__Secure-1PSID")
+    cookie_1psidts = file_cookies.get("__Secure-1PSIDTS")
 
-def split_text_into_chunks(text, max_length=3000):
-    """
-    Splits the input text into chunks of up to max_length characters,
-    ensuring that no word is cut during the process.
-    """
-    words = text.split()
-    chunks = []
-    current_chunk = ""
+    if not cookie_1psid:
+        return "Error: __Secure-1PSID missing from cookie file."
 
-    for word in words:
-        # Check if adding the next word would exceed the max_length
-        if len(current_chunk) + len(word) + 1 > max_length:
-            chunks.append(current_chunk.strip())
-            current_chunk = word + " "
+    # Start Async Loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    response_text = ""
+    client = None
+
+    try:
+        # 1. Initialize Client with Loaded Variables
+        print("[DEBUG] Initializing GeminiClient with file cookies...")
+        client = GeminiClient(
+            secure_1psid=cookie_1psid,
+            secure_1psidts=cookie_1psidts,
+        )
+
+        # 2. Inject ALL cookies from file (including 1PSIDCC)
+        for k, v in file_cookies.items():
+            if k not in client.cookies:
+                client.cookies[k] = v
+
+        # 3. Perform Handshake (init)
+        # Timeout slightly increased to ensure connection stability
+        loop.run_until_complete(client.init(timeout=30))
+
+        # 4. Generate Content
+        print(f"[DEBUG] Generating content for: {question[:30]}...")
+        response = loop.run_until_complete(client.generate_content(question))
+        response_text = response.text
+
+    except Exception as e:
+        error_msg = str(e)
+        if "cookie" in error_msg.lower() or "auth" in error_msg.lower():
+            response_text = (
+                f"AUTHENTICATION ERROR: Google rejected the cookies.\n"
+                f"Please refresh your 'gemini_cookies.json' file.\n"
+                f"Details: {error_msg}"
+            )
         else:
-            current_chunk += word + " "
+            response_text = f"Error executing request: {error_msg}"
+            print(f"[ERROR] {error_msg}")
 
-    # Add the last chunk if it's not empty
-    if current_chunk:
-        chunks.append(current_chunk.strip())
+    finally:
+        # 5. Cleanup
+        if client:
+            try:
+                loop.run_until_complete(asyncio.wait_for(client.close(), timeout=2))
+            except:
+                pass
+        loop.close()
 
-    return chunks
+    return response_text
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -122,69 +167,21 @@ def index():
     question = ""
 
     if request.method == 'POST':
-        print(f"\n[DEBUG] === POST request received on Index (/) ===")
         question = request.form['question']
-        print(f"[DEBUG] Question snippet: {question[:50]}...")
 
+        # Use ThreadPool to prevent blocking the Flask main thread
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(ask_gpt_dynamic, question, DEFAULT_MODEL)
+            future = executor.submit(run_async_gemini_task, question)
             try:
                 answer = future.result(timeout=DEFAULT_TIMEOUT)
-                print("[DEBUG] Future result retrieved successfully.")
-            except concurrent.futures.TimeoutError:
-                print("[DEBUG] !!! Request Timed Out !!!")
-                error = "Sorry, the request took too long and timed out. Please try again or reload."
+                if answer.startswith("Error") or answer.startswith("AUTHENTICATION ERROR"):
+                    error = answer
+                    answer = ""
             except Exception as e:
-                print(f"[DEBUG] !!! Unexpected Error: {e}")
-                error = f"An unexpected error occurred: {str(e)}"
-    else:
-        print(f"\n[DEBUG] GET request received on Index (/)")
+                error = f"Server Timeout or Error: {str(e)}"
 
     return render_template_string(HTML_TEMPLATE, answer=answer, question=question, error=error)
 
-log_dir = './LOGS'
-os.makedirs(log_dir, exist_ok=True)
-log_file_path = os.path.join(log_dir, 'log.txt')
-
-logging.basicConfig(
-    filename=log_file_path,
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s: %(message)s',
-)
-
-@app.route('/api/ask-gpt', methods=['POST'])
-def api_ask_gpt():
-    print(f"\n[DEBUG] === API Request received at /api/ask-gpt ===")
-
-    if not request.is_json:
-        print("[DEBUG] Error: Content-Type is not application/json")
-        return jsonify({"error": "Content-Type must be application/json"}), 400
-
-    data = request.get_json()
-    question = data.get("question", "")
-
-    # Get model from query parameter, fallback to default
-    model = request.args.get("model", DEFAULT_MODEL)
-    print(f"[DEBUG] API Params - Model: {model}")
-
-    if not question:
-        print("[DEBUG] Error: Missing question in body")
-        return jsonify({"error": "Missing 'question' in the request body."}), 400
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(ask_gpt_dynamic, question, model)
-        try:
-            answer = future.result(timeout=DEFAULT_TIMEOUT)
-            print("[DEBUG] API execution successful, returning JSON.")
-            return jsonify({"answer": answer, "model": model})
-        except concurrent.futures.TimeoutError:
-            print("[DEBUG] !!! API Request Timed Out")
-            return jsonify({"answer": "Request timed out. Try again later.", "model": model}), 504
-        except Exception as e:
-            print(f"[DEBUG] !!! API Internal Error: {e}")
-            return jsonify({"answer": f"Internal error: {str(e)}", "model": model}), 500
-
-
 if __name__ == '__main__':
-    print("[DEBUG] Server starting on 0.0.0.0:5000...")
+    print("[DEBUG] Starting server on 0.0.0.0:5000")
     app.run(host='0.0.0.0', debug=True, port=5000)

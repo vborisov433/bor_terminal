@@ -1,0 +1,41 @@
+[
+  {
+    "domain": ".google.com",
+    "expirationDate": 1770000000,
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PSIDCC",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "storeId": "0",
+    "value": "AKEyXzXC6D2a0qi45HtA5OpeKt9okJIJElBTuVQGuBoUpS5V6huveildsd6HBz9rOOX1vU8qd-A"
+  },
+  {
+    "domain": ".google.com",
+    "expirationDate": 1770000000,
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "storeId": "0",
+    "value": "g.a0005QhL16WRIJJRIyAxkycE22uDO_J2pMLscfELDf8No15sf-AkZIADosq48wAeU1_NpiMQBgACgYKAVMSARYSFQHGX2Mi8bzgSAuhL1s4thT63AYAixoVAUF8yKq0VucfnFEwKqdZbOEYAaXu0076"
+  },
+  {
+    "domain": ".google.com",
+    "expirationDate": 1770000000,
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PSIDTS",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "storeId": "0",
+    "value": "sidts-CjEBflaCdRmeY3fhCWO1QDmkf2664orYV8pBQC6tTEFS8LfVDPyc19mSqSHk7r2xMD8QEAA"
+  }
+]
