@@ -62,7 +62,7 @@ final class NewsController extends AbstractController
         if ($hasFilters) {
             // CASE A: Filtering active.
             // We MUST sort by 'a.id' so MySQL can use the same index for filtering AND sorting.
-            $qb->orderBy('a.id', 'DESC');
+            $qb->orderBy('n.id', 'DESC');
 
             if (is_numeric($surpriseMin)) {
                 $qb->andWhere('a.newsSurpriseIndex >= :surprise_min')
