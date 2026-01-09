@@ -23,7 +23,7 @@ final class GptController extends AbstractController
         read
         https://www.cnbc.com/2025/08/04/berkshire-shares-dip-after-earnings-decline-lack-of-buybacks-disappoint-investors-.html
         
-        for markets: dow , audjpy , audusd , dxy , fed interest rate
+        for markets: dow, audjpy, audusd, dxy, fed interest rate, dax, cac 40
         give: market sentiment , short summary
         return in json
         for each market in format:

@@ -134,7 +134,7 @@ from NEWS title:
 from NEWS content: 
 {$newsItem->getContent()}
 
-for markets: dow , audjpy , audusd , dxy , fed interest rate
+for markets: dow, audjpy, audusd, dxy, fed interest rate, dax, cac 40
 give: market sentiment , short summary
 return in json
 for each market in format:
