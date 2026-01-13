@@ -38,6 +38,10 @@ class GeminiManager:
         self.async_lock = asyncio.Lock()
         self.cookie_file = "gemini_cookies.json"
 
+        # Logging / ID helpers
+        self.query_counter = 0
+        self.log_lock = Lock()
+
         # Configuration
         self.generation_timeout = 50
         self.total_timeout = 110
@@ -90,7 +94,6 @@ class GeminiManager:
             except asyncio.TimeoutError:
                 attempts += 1
             except Exception as e:
-                # Silent retry logic, only fatal errors printed later
                 async with self.async_lock:
                     self.client = None
                 attempts += 1
@@ -99,9 +102,18 @@ class GeminiManager:
         return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
-        # 1. Print the Query
-        print(f"\n[QUERY] {prompt.strip()}")
+        # 1. Assign ID and Format Prompt
+        with self.log_lock:
+            self.query_counter += 1
+            q_id = self.query_counter
 
+        # Strip newlines and shorten to 25 chars
+        clean_prompt = prompt.strip().replace('\n', ' ')
+        short_prompt = (clean_prompt[:25] + '...') if len(clean_prompt) > 25 else clean_prompt
+
+        print(f"\n[QUERY #{q_id}] {short_prompt}")
+
+        # 2. Execute
         future = asyncio.run_coroutine_threadsafe(
             self._execute_with_retry(prompt),
             self.loop
@@ -110,15 +122,15 @@ class GeminiManager:
         try:
             result = future.result(timeout=self.total_timeout)
 
-            # 2. Print the Status
+            # 3. Print Status with Matching ID
             if result.startswith("Error"):
-                print("[STATUS] Failed ❌")
+                print(f"[STATUS #{q_id}] Failed ❌")
             else:
-                print("[STATUS] Success ✅")
+                print(f"[STATUS #{q_id}] Success ✅")
 
             return result
         except Exception as e:
-            print(f"[STATUS] Failed (Exception: {e}) ❌")
+            print(f"[STATUS #{q_id}] Failed (Exception) ❌")
             return f"Error: Request processing failed ({str(e)})"
 
 # Global Instance
