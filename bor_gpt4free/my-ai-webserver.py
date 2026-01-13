@@ -58,25 +58,31 @@ class GeminiManager:
             return
 
         if not os.path.exists(self.cookie_file):
+            print(f"[CRITICAL] Cookie file NOT FOUND at: {os.path.abspath(self.cookie_file)}")
             raise FileNotFoundError(f"Missing {self.cookie_file}")
 
-        with open(self.cookie_file, 'r') as f:
-            raw = json.load(f)
+        try:
+            with open(self.cookie_file, 'r') as f:
+                raw = json.load(f)
 
-        cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
+            cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
 
-        self.client = GeminiClient(
-            secure_1psid=cookies.get("__Secure-1PSID"),
-            secure_1psidts=cookies.get("__Secure-1PSIDTS")
-        )
+            self.client = GeminiClient(
+                secure_1psid=cookies.get("__Secure-1PSID"),
+                secure_1psidts=cookies.get("__Secure-1PSIDTS")
+            )
 
-        for k, v in cookies.items():
-            if k not in self.client.cookies:
-                self.client.cookies[k] = v
+            for k, v in cookies.items():
+                if k not in self.client.cookies:
+                    self.client.cookies[k] = v
 
-        await self.client.init(timeout=30)
+            await self.client.init(timeout=30)
+        except Exception as e:
+            print(f"[INIT ERROR] Failed to initialize GeminiClient: {e}")
+            traceback.print_exc()
+            raise
 
-    async def _execute_with_retry(self, prompt):
+    async def _execute_with_retry(self, prompt, q_id):
         attempts = 0
         max_attempts = 2
 
@@ -92,37 +98,43 @@ class GeminiManager:
                 return response.text
 
             except asyncio.TimeoutError:
+                print(f"[WARN #{q_id}] Attempt {attempts+1} timed out.")
                 attempts += 1
             except Exception as e:
+                # VERBOSE ERROR PRINTING
+                print(f"\n{'!'*60}")
+                print(f"[ERROR #{q_id}] Attempt {attempts+1} failed!")
+                print(f"Exception Type: {type(e).__name__}")
+                print(f"Details: {str(e)}")
+                print("-" * 30)
+                traceback.print_exc() # This shows the exact line where it crashed
+                print(f"{'!'*60}\n")
+
                 async with self.async_lock:
-                    self.client = None
+                    self.client = None # Reset client for next attempt
                 attempts += 1
-                await asyncio.sleep(1)
+                await asyncio.sleep(2) # Slightly longer cooldown
 
         return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
-        # 1. Assign ID and Format Prompt
         with self.log_lock:
             self.query_counter += 1
             q_id = self.query_counter
 
-        # Strip newlines and shorten to 25 chars
         clean_prompt = prompt.strip().replace('\n', ' ')
         short_prompt = (clean_prompt[:25] + '...') if len(clean_prompt) > 25 else clean_prompt
 
         print(f"\n[QUERY #{q_id}] {short_prompt}")
 
-        # 2. Execute
         future = asyncio.run_coroutine_threadsafe(
-            self._execute_with_retry(prompt),
+            self._execute_with_retry(prompt, q_id),
             self.loop
         )
 
         try:
             result = future.result(timeout=self.total_timeout)
 
-            # 3. Print Status with Matching ID
             if result.startswith("Error"):
                 print(f"[STATUS #{q_id}] Failed ❌")
             else:
@@ -130,7 +142,7 @@ class GeminiManager:
 
             return result
         except Exception as e:
-            print(f"[STATUS #{q_id}] Failed (Exception) ❌")
+            print(f"[STATUS #{q_id}] CRITICAL FAIL (Outer Exception: {e}) ❌")
             return f"Error: Request processing failed ({str(e)})"
 
 # Global Instance
@@ -141,7 +153,6 @@ bot_manager = GeminiManager()
 # ==================================================================================
 app = Flask(__name__)
 
-# Suppress Flask Request Logs
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
