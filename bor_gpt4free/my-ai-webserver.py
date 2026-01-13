@@ -34,11 +34,14 @@ class GeminiManager:
     def __init__(self):
         self.client = None
         self.loop = asyncio.new_event_loop()
-        self.lock = Lock()
+        # Use asyncio.Lock for internal state safety, not threading.Lock
+        self.async_lock = asyncio.Lock()
         self.cookie_file = "gemini_cookies.json"
-        self.default_timeout = 60  # Internal API timeout
 
-        # Start the background loop thread
+        # Configuration
+        self.generation_timeout = 50  # Time for one attempt
+        self.total_timeout = 110      # Max time Flask waits (allows for 1 retry)
+
         self.thread = Thread(target=self._run_event_loop, daemon=True)
         self.thread.start()
 
@@ -46,64 +49,83 @@ class GeminiManager:
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
-    async def _init_client(self, force=False):
-        """Initializes or restarts the client."""
-        if self.client and not force:
+    async def _ensure_client(self):
+        """Ensures client is active. Must be called within the loop."""
+        if self.client:
             return
 
-        if self.client:
-            try: await self.client.close()
-            except: pass
-
         if not os.path.exists(self.cookie_file):
-            raise Exception(f"'{self.cookie_file}' not found.")
+            raise FileNotFoundError(f"Missing {self.cookie_file}")
 
+        print("[SYS] Initializing Gemini Client...")
         with open(self.cookie_file, 'r') as f:
             raw = json.load(f)
 
+        # Normalize cookies (handle list vs dict format)
         cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
 
-        print("[SYS] (Re)Connecting to Gemini...")
         self.client = GeminiClient(
             secure_1psid=cookies.get("__Secure-1PSID"),
             secure_1psidts=cookies.get("__Secure-1PSIDTS")
         )
 
+        # Load extra cookies
         for k, v in cookies.items():
             if k not in self.client.cookies:
                 self.client.cookies[k] = v
 
-        await self.client.init(timeout=self.default_timeout)
-        print("[SYS] Connection established.")
+        await self.client.init(timeout=30)
+        print("[SYS] Gemini Client Ready.")
 
-    async def _generate_task(self, prompt):
-        """Attempts generation with one-time retry on failure."""
-        try:
-            await self._init_client()
-            # Use wait_for to ensure the library doesn't hang the loop
-            response = await asyncio.wait_for(
-                self.client.generate_content(prompt),
-                timeout=self.default_timeout
-            )
-            return response.text
-        except Exception as e:
-            print(f"[RETRY] Caught error: {e}. Restarting session...")
-            await self._init_client(force=True)
-            response = await asyncio.wait_for(
-                self.client.generate_content(prompt),
-                timeout=self.default_timeout
-            )
-            return response.text
+    async def _execute_with_retry(self, prompt):
+        """Logic running inside the asyncio loop."""
+        # Acquire async lock only during client init/access, not the whole generation
+        # NOTE: If the library does not support concurrent generate_content,
+        # keep the lock for the whole block. Assuming aiohttp-based, it usually supports it.
+
+        attempts = 0
+        max_attempts = 2
+
+        while attempts < max_attempts:
+            try:
+                # 1. Ensure Client Exists
+                async with self.async_lock:
+                    await self._ensure_client()
+
+                # 2. Generate (Allow concurrency here if library supports it)
+                print(f"[ASYNC] sending query (Attempt {attempts+1})...")
+                response = await asyncio.wait_for(
+                    self.client.generate_content(prompt),
+                    timeout=self.generation_timeout
+                )
+                return response.text
+
+            except asyncio.TimeoutError:
+                print(f"[WARN] Timeout on attempt {attempts+1}")
+                attempts += 1
+            except Exception as e:
+                print(f"[ERR] Error on attempt {attempts+1}: {e}")
+                # Only force reset on non-timeout errors (potential auth issues)
+                async with self.async_lock:
+                    self.client = None # Force re-init next loop
+                attempts += 1
+                await asyncio.sleep(1) # Cool down
+
+        return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
-        """Thread-safe entry point for Flask."""
-        with self.lock:
-            future = asyncio.run_coroutine_threadsafe(self._generate_task(prompt), self.loop)
-            try:
-                # Flask waits for the background result
-                return future.result(timeout=self.default_timeout + 5)
-            except Exception as e:
-                return f"Error: Request failed or timed out ({str(e)})"
+        """Thread-safe entry point. Non-blocking for other requests."""
+        # Submit task to background loop
+        future = asyncio.run_coroutine_threadsafe(
+            self._execute_with_retry(prompt),
+            self.loop
+        )
+
+        try:
+            # Flask thread waits here, but DOES NOT block other Flask threads
+            return future.result(timeout=self.total_timeout)
+        except Exception as e:
+            return f"Error: Request processing failed ({str(e)})"
 
 # Global Instance
 bot_manager = GeminiManager()
