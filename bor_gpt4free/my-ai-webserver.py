@@ -27,6 +27,8 @@ except ImportError as e:
     print(f"[CRITICAL] Import failed: {e}")
     sys.exit(1)
 
+from gemini_webapi.constants import Model
+
 # ==================================================================================
 # [CORE] PERSISTENT & SELF-HEALING MANAGER
 # ==================================================================================
@@ -95,7 +97,7 @@ class GeminiManager:
                 # 2. Generate (Allow concurrency here if library supports it)
                 print(f"[ASYNC] sending query (Attempt {attempts+1})...")
                 response = await asyncio.wait_for(
-                    self.client.generate_content(prompt),
+                    self.client.generate_content(prompt,model=Model.G_3_0_PRO),
                     timeout=self.generation_timeout
                 )
                 return response.text
