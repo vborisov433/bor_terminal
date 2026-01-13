@@ -148,7 +148,7 @@ request_timestamps = []
 request_lock = Lock()
 RATE_QUOTA = 3
 RATE_WINDOW = 20
-DEFAULT_TIMEOUT = 30
+DEFAULT_TIMEOUT = 130
 
 @app.route('/api/ask-gpt', methods=['POST'])
 def ask_gpt():
