@@ -5,3 +5,4 @@ bor_gpt4free/LOGS
 bor_gpt4free/gpt4free
 bor_gpt4free/Gemini-API
 .env
+.DS_Store

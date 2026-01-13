@@ -109,7 +109,7 @@ def run_async_gemini_task(question):
             for k, v in file_cookies.items():
                 if k not in client.cookies: client.cookies[k] = v
 
-            await client.init(timeout=30)
+            await client.init(timeout=DEFAULT_TIMEOUT)
 
             # --- DEBUGGING "FAILED TO GENERATE CONTENTS" ---
             response = await client.generate_content(question)
