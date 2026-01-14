@@ -41,7 +41,9 @@ class GeminiManager:
         # --- [CONFIG] ACCOUNT MANAGEMENT ---
         # List your cookie files here. If you have multiple, the system will rotate them on 429s.
         self.cookie_files = ["gemini_cookies.json"]
-        # Example for multiple: ["gemini_cookies_1.json", "gemini_cookies_2.json"]
+
+        # Log file for 429 tracking
+        self.rate_limit_log = "rate_limit_events.log"
 
         self.current_account_index = 0
 
@@ -78,6 +80,16 @@ class GeminiManager:
             return True
         return False
 
+    def _log_rate_limit(self, q_id):
+        """Writes the 429 event to a file."""
+        try:
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            with open(self.rate_limit_log, "a") as f:
+                f.write(f"[{timestamp}] HIT 429 ERROR at Request #{q_id}\n")
+            print(f"[LOGGING] 📝 Recorded 429 event for Request #{q_id} to {self.rate_limit_log}")
+        except Exception as e:
+            print(f"[LOGGING ERROR] Could not write to log file: {e}")
+
     async def _ensure_client(self):
         """Initializes the client if needed, respecting rate limits."""
         if self.client:
@@ -96,7 +108,6 @@ class GeminiManager:
 
             if not os.path.exists(target_cookie_file):
                 print(f"[CRITICAL] Cookie file NOT FOUND: {target_cookie_file}")
-                # Try to fall back to index 0 if specific file missing
                 if self.current_account_index != 0:
                      self.current_account_index = 0
                      print("[SYSTEM] Fallback to index 0")
@@ -115,13 +126,11 @@ class GeminiManager:
                 )
 
                 # [STRATEGY] User-Agent Rotation
-                # We try to inject a random UA if possible to avoid fingerprinting
                 user_agents = [
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
                     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
                 ]
-                # Note: gemini_webapi might overwrite this, but we try anyway
                 if hasattr(self.client, "session"):
                     self.client.session.headers["User-Agent"] = random.choice(user_agents)
 
@@ -131,8 +140,6 @@ class GeminiManager:
 
                 await self.client.init(timeout=40)
                 print("[SYSTEM] Gemini Client Successfully Initialized ✅")
-
-                # Clear rate limit flag on success
                 self.is_rate_limited = False
 
             except Exception as e:
@@ -145,15 +152,12 @@ class GeminiManager:
         if self.is_rate_limited:
             remaining = self.rate_limit_resume_time - time.time()
             if remaining > 0:
-                # If we have multiple accounts, we shouldn't be blocked here unless ALL failed.
-                # But for simplicity, if flag is raised, we block.
                 return f"Error: System cooling down ({int(remaining)}s remaining)."
             else:
                 self.is_rate_limited = False
                 print(f"[SYSTEM #{q_id}] Cooldown expired. Resuming.")
 
         # [STRATEGY] Human Jitter
-        # Random sleep 3-7 seconds to act like a human
         jitter = random.uniform(3, 7)
         print(f"[SYSTEM #{q_id}] ⏳ Human Jitter: Sleeping {jitter:.2f}s...")
         await asyncio.sleep(jitter)
@@ -185,29 +189,31 @@ class GeminiManager:
                 if "429" in error_str or "too many requests" in error_str:
                     print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
 
+                    # >>> NEW: LOG 429 EVENT <<<
+                    self._log_rate_limit(q_id)
+
                     # Try to rotate account
                     rotated = self._rotate_account()
                     if rotated:
                         print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying immediately...")
                         async with self.async_lock:
-                            self.client = None # Reset so next loop picks up new file
+                            self.client = None
                         attempts += 1
-                        continue # Retry loop immediately
+                        continue
                     else:
                         # No other accounts? Pause.
                         self.is_rate_limited = True
                         self.rate_limit_resume_time = time.time() + 180 # 3 Mins
                         return "Error: Rate limit reached. Pausing for 3 minutes."
 
-                # CASE B: Server Error (500/503) - DO NOT RESET CLIENT
+                # CASE B: Server Error (500/503)
                 elif "500" in error_str or "503" in error_str or "overloaded" in error_str:
                     print(f"[WARN #{q_id}] Google Server Error. Waiting 10s...")
                     await asyncio.sleep(10)
                     attempts += 1
-                    # Do NOT set self.client = None. Keep session.
                     continue
 
-                # CASE C: Auth Error - Reset Client
+                # CASE C: Auth Error
                 elif "auth" in error_str or "login" in error_str or "cookie" in error_str:
                     print(f"[WARN #{q_id}] Auth invalid. Resetting client...")
                     async with self.async_lock:
