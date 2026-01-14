@@ -139,10 +139,10 @@ class GeminiManager:
 
                 # [CRITICAL] 429 DETECTOR
                 if "429" in error_str or "too many requests" in error_str:
-                    print(f"[ALERT #{q_id}] 429 Rate Limit Detected! Pausing 2 mins. 🛑")
+                    print(f"[ALERT #{q_id}] 429 Rate Limit Detected! Pausing 5 mins. 🛑")
                     self.is_rate_limited = True
-                    self.rate_limit_resume_time = time.time() + 120 # 2 Minute Pause
-                    return "Error: Rate limit reached. The system is pausing for 2 minutes."
+                    self.rate_limit_resume_time = time.time() + 360 # 5 Minute Pause
+                    return "Error: Rate limit reached. The system is pausing for 5 minutes."
 
                 print(f"[ERROR #{q_id}] Attempt {attempts+1} failed: {e}")
 
