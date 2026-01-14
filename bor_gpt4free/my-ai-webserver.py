@@ -322,13 +322,12 @@ QUOTA_LOCK = Lock()
 SESSION_COUNTER = 0
 BLOCK_EXPIRATION = 0
 MAX_REQUESTS = 50
-COOLDOWN_SECONDS = 3600
+COOLDOWN_SECONDS = 1000
 
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask():
     global SESSION_COUNTER, BLOCK_EXPIRATION
 
-    # [NEW] 1. Print immediately when a request hits the endpoint
     print(f"\n[API] 📥 New Request Received at {time.strftime('%X')}")
 
     with QUOTA_LOCK:
@@ -344,13 +343,13 @@ def api_ask():
             print("[SYSTEM] 🟢 Server Block Expired. Counter reset.")
 
         SESSION_COUNTER += 1
-        
+
         print(f"[API] Request #{SESSION_COUNTER} (Limit: {MAX_REQUESTS})")
 
         if SESSION_COUNTER >= MAX_REQUESTS:
             BLOCK_EXPIRATION = current_time + COOLDOWN_SECONDS
 
-            print(f"[API] 🚨 MAX_REQUESTS REACHED! Blocking incoming traffic for 1 hour.")
+            print(f"[API] 🚨 MAX_REQUESTS REACHED! Blocking incoming traffic for 16 min")
             return jsonify({}), 200
 
     try:
