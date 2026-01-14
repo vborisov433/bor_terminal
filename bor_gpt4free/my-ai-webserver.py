@@ -327,16 +327,30 @@ COOLDOWN_SECONDS = 3600
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask():
     global SESSION_COUNTER, BLOCK_EXPIRATION
+
+    # [NEW] 1. Print immediately when a request hits the endpoint
+    print(f"\n[API] 📥 New Request Received at {time.strftime('%X')}")
+
     with QUOTA_LOCK:
         current_time = time.time()
+
         if BLOCK_EXPIRATION > 0 and current_time < BLOCK_EXPIRATION:
+            print(f"[API] ⛔ Blocked: Cooldown active ({int(BLOCK_EXPIRATION - current_time)}s remaining)")
             return jsonify({}), 200
+
         if BLOCK_EXPIRATION > 0 and current_time >= BLOCK_EXPIRATION:
             SESSION_COUNTER = 0
             BLOCK_EXPIRATION = 0
+            print("[SYSTEM] 🟢 Server Block Expired. Counter reset.")
+
         SESSION_COUNTER += 1
+        
+        print(f"[API] Request #{SESSION_COUNTER} (Limit: {MAX_REQUESTS})")
+
         if SESSION_COUNTER >= MAX_REQUESTS:
             BLOCK_EXPIRATION = current_time + COOLDOWN_SECONDS
+
+            print(f"[API] 🚨 MAX_REQUESTS REACHED! Blocking incoming traffic for 1 hour.")
             return jsonify({}), 200
 
     try:
