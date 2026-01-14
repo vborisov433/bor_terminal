@@ -44,8 +44,8 @@ class GeminiManager:
         self.log_lock = Lock()
 
         # Configuration
-        self.generation_timeout = 50
-        self.total_timeout = 110
+        self.generation_timeout = 120
+        self.total_timeout = 320
 
         # Start the background event loop
         self.thread = Thread(target=self._run_event_loop, daemon=True)
@@ -92,7 +92,7 @@ class GeminiManager:
                     if k not in self.client.cookies:
                         self.client.cookies[k] = v
 
-                await self.client.init(timeout=30)
+                await self.client.init(timeout=50)
                 print("[SYSTEM] Gemini Client Successfully Initialized ✅")
 
             except Exception as e:
