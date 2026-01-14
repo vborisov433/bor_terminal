@@ -61,6 +61,8 @@ TEST_PROMPTS = [
 class GeminiManager:
     def __init__(self):
         self.client = None
+        self.chat = None  # [NEW] Persistent Chat Session
+
         self.loop = asyncio.new_event_loop()
         self.async_lock = asyncio.Lock()
 
@@ -99,6 +101,9 @@ class GeminiManager:
             prev = self.current_account_index
             self.current_account_index = (self.current_account_index + 1) % len(self.cookie_files)
             print(f"[SYSTEM] 🔄 Rotating Account: {prev} -> {self.current_account_index}")
+
+            # [NEW] Clear chat session on rotation so we start fresh
+            self.chat = None
             return True
         return False
 
@@ -157,11 +162,16 @@ class GeminiManager:
                         self.client.cookies[k] = v
 
                 await self.client.init(timeout=40)
+
+                # [NEW] Reset chat session when client is re-initialized
+                self.chat = None
+
                 self.is_rate_limited = False
 
             except Exception as e:
                 print(f"[INIT ERROR] Failed to initialize: {e}")
                 self.client = None
+                self.chat = None
                 raise
 
     async def _execute_with_retry(self, prompt, q_id):
@@ -184,8 +194,18 @@ class GeminiManager:
         while attempts < max_attempts:
             try:
                 await self._ensure_client()
+
+                # [NEW] Chat Persistence Logic
+                # If we don't have an active chat session, start one.
+                if self.chat is None:
+                    print(f"[SYSTEM #{q_id}] 🆕 Starting new Chat Session...")
+                    # Note: Most wrappers use start_chat(). If your specific lib uses a different
+                    # method name, this line might need adjustment.
+                    self.chat = self.client.start_chat()
+
+                # Send message to the existing chat instead of generating new content
                 response = await asyncio.wait_for(
-                    self.client.generate_content(prompt),
+                    self.chat.send_message(prompt),
                     timeout=self.generation_timeout
                 )
                 return response.text
@@ -201,12 +221,13 @@ class GeminiManager:
                 # CASE A: Rate Limit (429)
                 if "429" in error_str or "too many requests" in error_str:
                     print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
-                    self._log_rate_limit(q_id) # <--- Log immediately
+                    self._log_rate_limit(q_id)
 
                     if self._rotate_account():
                         print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
                         async with self.async_lock:
                             self.client = None
+                            self.chat = None # Reset chat
                         attempts += 1
                         continue
                     else:
@@ -221,11 +242,13 @@ class GeminiManager:
                     attempts += 1
                     continue
 
-                # CASE C: Auth Error
-                elif "auth" in error_str or "login" in error_str:
-                    print(f"[WARN #{q_id}] Auth invalid. Resetting client...")
+                # CASE C: Auth Error / Chat Error
+                # If the chat is invalid (expired), we reset client and chat
+                elif "auth" in error_str or "login" in error_str or "session" in error_str:
+                    print(f"[WARN #{q_id}] Session/Auth invalid. Resetting client...")
                     async with self.async_lock:
                         self.client = None
+                        self.chat = None
 
                 attempts += 1
                 await asyncio.sleep(3)
@@ -273,7 +296,6 @@ def run_stress_test_loop():
     print("\n[TEST] 🧪 STARTED: Stress Testing for Rate Limits...")
 
     while STRESS_TEST_RUNNING:
-        # Check if we are already blocked
         if bot_manager.is_rate_limited:
             print("[TEST] 🛑 System reported Rate Limit! Test stopping.")
             break
@@ -283,13 +305,10 @@ def run_stress_test_loop():
 
         result = bot_manager.query(prompt)
 
-        # Check result text for specific error messages
         if "Rate limit reached" in result:
             print("[TEST] 🛑 Received Rate Limit Error from Manager. Stopping.")
             break
 
-        # Small buffer to prevent crashing the loop itself,
-        # but the manager has its own jitter too.
         time.sleep(1)
 
     STRESS_TEST_RUNNING = False
@@ -343,13 +362,11 @@ def api_ask():
             print("[SYSTEM] 🟢 Server Block Expired. Counter reset.")
 
         SESSION_COUNTER += 1
-
         print(f"[API] Request #{SESSION_COUNTER} (Limit: {MAX_REQUESTS})")
 
         if SESSION_COUNTER >= MAX_REQUESTS:
             BLOCK_EXPIRATION = current_time + COOLDOWN_SECONDS
-
-            print(f"[API] 🚨 MAX_REQUESTS REACHED! Blocking incoming traffic for 16 min")
+            print(f"[API] 🚨 MAX_REQUESTS REACHED! Blocking incoming traffic for 16 min.")
             return jsonify({}), 200
 
     try:
