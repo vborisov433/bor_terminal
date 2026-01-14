@@ -17,12 +17,13 @@ gemini_src_path = os.path.join(current_dir, 'Gemini-API', 'src')
 if os.path.exists(gemini_src_path):
     sys.path.append(gemini_src_path)
 else:
-    print(f"[CRITICAL] Missing folder: {gemini_src_path}")
-    sys.exit(1)
+    # Optional: Don't exit hard if you want to run without the sub-repo for testing logic
+    print(f"[WARNING] Missing folder: {gemini_src_path}")
 
 try:
     from gemini_webapi import GeminiClient
     import gemini_webapi.utils
+    # Prevent the lib from trying to load browser cookies automatically
     gemini_webapi.utils.load_browser_cookies = lambda: {}
 except ImportError as e:
     print(f"[CRITICAL] Import failed: {e}")
@@ -35,7 +36,7 @@ class GeminiManager:
     def __init__(self):
         self.client = None
         self.loop = asyncio.new_event_loop()
-        self.async_lock = asyncio.Lock()
+        self.async_lock = asyncio.Lock() # Async lock for client init
         self.cookie_file = "gemini_cookies.json"
 
         # Logging / ID helpers
@@ -46,41 +47,58 @@ class GeminiManager:
         self.generation_timeout = 50
         self.total_timeout = 110
 
+        # Start the background event loop
         self.thread = Thread(target=self._run_event_loop, daemon=True)
         self.thread.start()
 
     def _run_event_loop(self):
+        """Runs the asyncio loop in a separate thread forever."""
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
     async def _ensure_client(self):
+        """
+        Checks if client exists. If it does, returns immediately.
+        If not, initializes it using the lock to prevent race conditions.
+        """
         if self.client:
             return
 
-        if not os.path.exists(self.cookie_file):
-            print(f"[CRITICAL] Cookie file NOT FOUND at: {os.path.abspath(self.cookie_file)}")
-            raise FileNotFoundError(f"Missing {self.cookie_file}")
+        # Double-check locking to ensure only one thread initializes
+        async with self.async_lock:
+            if self.client: # Check again in case another thread beat us to it
+                return
 
-        try:
-            with open(self.cookie_file, 'r') as f:
-                raw = json.load(f)
+            print(f"[SYSTEM] Initializing new Gemini Client...")
 
-            cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
+            if not os.path.exists(self.cookie_file):
+                print(f"[CRITICAL] Cookie file NOT FOUND at: {os.path.abspath(self.cookie_file)}")
+                raise FileNotFoundError(f"Missing {self.cookie_file}")
 
-            self.client = GeminiClient(
-                secure_1psid=cookies.get("__Secure-1PSID"),
-                secure_1psidts=cookies.get("__Secure-1PSIDTS")
-            )
+            try:
+                with open(self.cookie_file, 'r') as f:
+                    raw = json.load(f)
 
-            for k, v in cookies.items():
-                if k not in self.client.cookies:
-                    self.client.cookies[k] = v
+                # Handle both list (EditThisCookie) and dict formats
+                cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
 
-            await self.client.init(timeout=30)
-        except Exception as e:
-            print(f"[INIT ERROR] Failed to initialize GeminiClient: {e}")
-            traceback.print_exc()
-            raise
+                self.client = GeminiClient(
+                    secure_1psid=cookies.get("__Secure-1PSID"),
+                    secure_1psidts=cookies.get("__Secure-1PSIDTS")
+                )
+
+                # Load remaining cookies
+                for k, v in cookies.items():
+                    if k not in self.client.cookies:
+                        self.client.cookies[k] = v
+
+                await self.client.init(timeout=30)
+                print("[SYSTEM] Gemini Client Successfully Initialized ✅")
+
+            except Exception as e:
+                print(f"[INIT ERROR] Failed to initialize GeminiClient: {e}")
+                self.client = None # Ensure it stays None so we retry next time
+                raise
 
     async def _execute_with_retry(self, prompt, q_id):
         attempts = 0
@@ -88,9 +106,10 @@ class GeminiManager:
 
         while attempts < max_attempts:
             try:
-                async with self.async_lock:
-                    await self._ensure_client()
+                # 1. Ensure client is ready (Fast return if already active)
+                await self._ensure_client()
 
+                # 2. Generate Content
                 response = await asyncio.wait_for(
                     self.client.generate_content(prompt),
                     timeout=self.generation_timeout
@@ -101,105 +120,99 @@ class GeminiManager:
                 print(f"[WARN #{q_id}] Attempt {attempts+1} timed out.")
                 attempts += 1
             except Exception as e:
-                # VERBOSE ERROR PRINTING
-                print(f"\n{'!'*60}")
-                print(f"[ERROR #{q_id}] Attempt {attempts+1} failed!")
-                print(f"Exception Type: {type(e).__name__}")
-                print(f"Details: {str(e)}")
-                print("-" * 30)
-                traceback.print_exc() # This shows the exact line where it crashed
-                print(f"{'!'*60}\n")
+                print(f"[ERROR #{q_id}] Attempt {attempts+1} failed: {e}")
 
+                # Only reset client if it's a connection/API error,
+                # allowing _ensure_client to rebuild it on the next pass.
                 async with self.async_lock:
-                    self.client = None # Reset client for next attempt
+                    self.client = None
+
                 attempts += 1
-                await asyncio.sleep(2) # Slightly longer cooldown
+                await asyncio.sleep(2)
 
         return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
+        """Thread-safe entry point for Flask to call."""
         with self.log_lock:
             self.query_counter += 1
             q_id = self.query_counter
 
-        clean_prompt = prompt.strip().replace('\n', ' ')
-        short_prompt = (clean_prompt[:25] + '...') if len(clean_prompt) > 25 else clean_prompt
+        # Basic prompt cleanup
+        clean_prompt = prompt.strip()
+        print(f"\n[QUERY #{q_id}] Processing...")
 
-        print(f"\n[QUERY #{q_id}] {short_prompt}")
-
+        # Submit the async task to the background thread
         future = asyncio.run_coroutine_threadsafe(
-            self._execute_with_retry(prompt, q_id),
+            self._execute_with_retry(clean_prompt, q_id),
             self.loop
         )
 
         try:
             result = future.result(timeout=self.total_timeout)
-
             if result.startswith("Error"):
                 print(f"[STATUS #{q_id}] Failed ❌")
             else:
                 print(f"[STATUS #{q_id}] Success ✅")
-
             return result
         except Exception as e:
-            print(f"[STATUS #{q_id}] CRITICAL FAIL (Outer Exception: {e}) ❌")
+            print(f"[STATUS #{q_id}] CRITICAL TIMEOUT/FAIL: {e} ❌")
             return f"Error: Request processing failed ({str(e)})"
-
-# Global Instance
-bot_manager = GeminiManager()
 
 # ==================================================================================
 # [FLASK] APP SETUP
 # ==================================================================================
 app = Flask(__name__)
 
+# Reduce Flask logging clutter
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-# --- RATE LIMIT / QUOTA CONFIGURATION ---
+# Initialize the manager ONCE globally
+bot_manager = GeminiManager()
+
+# --- RATE LIMIT CONFIGURATION ---
 QUOTA_LOCK = Lock()
-SESSION_COUNTER = 0       # Tracks total requests
-BLOCK_EXPIRATION = 0      # Timestamp when the block ends
-MAX_REQUESTS = 50         # Limit before blocking
-COOLDOWN_SECONDS = 3600   # 1 Hour in seconds (3600s)
+SESSION_COUNTER = 0
+BLOCK_EXPIRATION = 0
+MAX_REQUESTS = 50
+COOLDOWN_SECONDS = 3600
 
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask():
     global SESSION_COUNTER, BLOCK_EXPIRATION
 
-    # --- QUOTA CHECK LOGIC ---
+    # --- RATE LIMIT LOGIC ---
     with QUOTA_LOCK:
         current_time = time.time()
 
-        # 1. Check if we are currently inside the 1-hour block window
+        # Check active block
         if current_time < BLOCK_EXPIRATION:
-            # Still blocked: Return empty JSON, but status 200
             return jsonify({}), 200
 
-        # 2. If block time has passed (or was never set), check if we need to reset
+        # Reset block if time passed
         if BLOCK_EXPIRATION > 0 and current_time >= BLOCK_EXPIRATION:
             SESSION_COUNTER = 0
             BLOCK_EXPIRATION = 0
-            print("[SYSTEM] 1-Hour Block Expired. Counter reset to 0.")
+            print("[SYSTEM] Block Expired. Counter reset.")
 
-        # 3. Increment request counter
         SESSION_COUNTER += 1
 
-        # 4. Check if we just hit the limit
+        # Check limit
         if SESSION_COUNTER >= MAX_REQUESTS:
-            # Set expiration to 1 hour from now
             BLOCK_EXPIRATION = current_time + COOLDOWN_SECONDS
-            print(f"[SYSTEM] Limit of {MAX_REQUESTS} requests reached. Blocking API for 1 hour.")
-            # Return empty success for this request as well
+            print(f"[SYSTEM] Limit reached. Blocking for 1 hour.")
             return jsonify({}), 200
 
-    # --- NORMAL PROCESSING ---
+    # --- PROCESS REQUEST ---
     try:
         data = request.get_json(silent=True) or {}
         prompt = data.get('prompt') or data.get('question')
+
         if not prompt:
             return jsonify({"error": "Missing prompt"}), 400
 
+        # Calls the existing global bot_manager instance
         result = bot_manager.query(prompt)
 
         if result.startswith("Error"):
@@ -209,6 +222,7 @@ def api_ask():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# Optional Web Interface
 @app.route('/', methods=['GET', 'POST'])
 def web_index():
     answer, error, question = "", "", ""
@@ -223,14 +237,14 @@ def web_index():
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
-<head><title>Gemini Persistent</title>
+<head><title>Gemini API</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body class="p-5 bg-light">
     <div class="container" style="max-width: 800px;">
-        <h2 class="mb-4">🤖 Gemini Persistent Session</h2>
+        <h2 class="mb-4">🤖 Gemini API Interface</h2>
         <form method="post">
-            <textarea name="question" class="form-control mb-3" rows="5" placeholder="Ask something...">{{question}}</textarea>
-            <button class="btn btn-primary w-100">Send Request</button>
+            <textarea name="question" class="form-control mb-3" rows="5" placeholder="Enter prompt...">{{question}}</textarea>
+            <button class="btn btn-primary w-100">Submit</button>
         </form>
         {% if answer %}<div class="card mt-4 shadow-sm"><div class="card-body"><pre style="white-space: pre-wrap;">{{answer}}</pre></div></div>{% endif %}
         {% if error %}<div class="alert alert-danger mt-4">{{error}}</div>{% endif %}
