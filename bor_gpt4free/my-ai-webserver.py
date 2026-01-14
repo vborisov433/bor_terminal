@@ -30,6 +30,32 @@ except ImportError as e:
     sys.exit(1)
 
 # ==================================================================================
+# [DATA] TEST PROMPTS (For Stress Testing)
+# ==================================================================================
+TEST_PROMPTS = [
+    "Explain the theory of relativity in one sentence.",
+    "What is the distance between Earth and Mars?",
+    "Write a haiku about coding.",
+    "What are the three laws of robotics?",
+    "Convert 100 Celsius to Fahrenheit.",
+    "Who painted the Mona Lisa?",
+    "What is the capital of Australia?",
+    "Explain how a rainbow is formed.",
+    "What is the speed of light?",
+    "Name three types of clouds.",
+    "What is the boiling point of nitrogen?",
+    "Who wrote Hamlet?",
+    "What is the square root of 144?",
+    "Define 'recursion' in programming.",
+    "What is the primary ingredient in hummus?",
+    "How many bones are in the human body?",
+    "What is the chemical symbol for Gold?",
+    "Explain the concept of inflation.",
+    "What year did the Titanic sink?",
+    "Write a random inspirational quote."
+]
+
+# ==================================================================================
 # [CORE] PERSISTENT MANAGER (MULTI-ACCOUNT & ANTI-BOT)
 # ==================================================================================
 class GeminiManager:
@@ -39,12 +65,8 @@ class GeminiManager:
         self.async_lock = asyncio.Lock()
 
         # --- [CONFIG] ACCOUNT MANAGEMENT ---
-        # List your cookie files here. If you have multiple, the system will rotate them on 429s.
         self.cookie_files = ["gemini_cookies.json"]
-
-        # Log file for 429 tracking
         self.rate_limit_log = "rate_limit_events.log"
-
         self.current_account_index = 0
 
         # Logging / ID helpers
@@ -84,8 +106,9 @@ class GeminiManager:
         """Writes the 429 event to a file."""
         try:
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            msg = f"[{timestamp}] HIT 429 ERROR at Request #{q_id}\n"
             with open(self.rate_limit_log, "a") as f:
-                f.write(f"[{timestamp}] HIT 429 ERROR at Request #{q_id}\n")
+                f.write(msg)
             print(f"[LOGGING] 📝 Recorded 429 event for Request #{q_id} to {self.rate_limit_log}")
         except Exception as e:
             print(f"[LOGGING ERROR] Could not write to log file: {e}")
@@ -98,26 +121,22 @@ class GeminiManager:
         async with self.async_lock:
             if self.client: return
 
-            # [CHECK] If rate limited and we can't rotate accounts, we must wait
             if self.is_rate_limited and time.time() < self.rate_limit_resume_time:
                 wait_time = int(self.rate_limit_resume_time - time.time())
                 raise Exception(f"System cooling down. Waiting {wait_time}s.")
 
             target_cookie_file = self._get_current_cookie_file()
-            print(f"[SYSTEM] Initializing Client with: {target_cookie_file} ...")
 
             if not os.path.exists(target_cookie_file):
                 print(f"[CRITICAL] Cookie file NOT FOUND: {target_cookie_file}")
                 if self.current_account_index != 0:
                      self.current_account_index = 0
-                     print("[SYSTEM] Fallback to index 0")
                      return await self._ensure_client()
                 raise FileNotFoundError(f"Missing {target_cookie_file}")
 
             try:
                 with open(target_cookie_file, 'r') as f:
                     raw = json.load(f)
-
                 cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
 
                 self.client = GeminiClient(
@@ -125,11 +144,10 @@ class GeminiManager:
                     secure_1psidts=cookies.get("__Secure-1PSIDTS")
                 )
 
-                # [STRATEGY] User-Agent Rotation
+                # UA Rotation
                 user_agents = [
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
                 ]
                 if hasattr(self.client, "session"):
                     self.client.session.headers["User-Agent"] = random.choice(user_agents)
@@ -139,7 +157,6 @@ class GeminiManager:
                         self.client.cookies[k] = v
 
                 await self.client.init(timeout=40)
-                print("[SYSTEM] Gemini Client Successfully Initialized ✅")
                 self.is_rate_limited = False
 
             except Exception as e:
@@ -148,14 +165,13 @@ class GeminiManager:
                 raise
 
     async def _execute_with_retry(self, prompt, q_id):
-        # 1. Circuit Breaker Check
+        # 1. Circuit Breaker
         if self.is_rate_limited:
             remaining = self.rate_limit_resume_time - time.time()
             if remaining > 0:
                 return f"Error: System cooling down ({int(remaining)}s remaining)."
             else:
                 self.is_rate_limited = False
-                print(f"[SYSTEM #{q_id}] Cooldown expired. Resuming.")
 
         # [STRATEGY] Human Jitter
         jitter = random.uniform(3, 7)
@@ -168,7 +184,6 @@ class GeminiManager:
         while attempts < max_attempts:
             try:
                 await self._ensure_client()
-
                 response = await asyncio.wait_for(
                     self.client.generate_content(prompt),
                     timeout=self.generation_timeout
@@ -176,45 +191,38 @@ class GeminiManager:
                 return response.text
 
             except asyncio.TimeoutError:
-                print(f"[WARN #{q_id}] Timeout (Attempt {attempts+1})")
+                print(f"[WARN #{q_id}] Timeout")
                 attempts += 1
 
             except Exception as e:
                 error_str = str(e).lower()
                 print(f"[ERROR #{q_id}] {e}")
 
-                # --- ERROR STRATEGY ---
-
                 # CASE A: Rate Limit (429)
                 if "429" in error_str or "too many requests" in error_str:
                     print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
+                    self._log_rate_limit(q_id) # <--- Log immediately
 
-                    # >>> NEW: LOG 429 EVENT <<<
-                    self._log_rate_limit(q_id)
-
-                    # Try to rotate account
-                    rotated = self._rotate_account()
-                    if rotated:
-                        print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying immediately...")
+                    if self._rotate_account():
+                        print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
                         async with self.async_lock:
                             self.client = None
                         attempts += 1
                         continue
                     else:
-                        # No other accounts? Pause.
                         self.is_rate_limited = True
-                        self.rate_limit_resume_time = time.time() + 180 # 3 Mins
+                        self.rate_limit_resume_time = time.time() + 180
                         return "Error: Rate limit reached. Pausing for 3 minutes."
 
-                # CASE B: Server Error (500/503)
-                elif "500" in error_str or "503" in error_str or "overloaded" in error_str:
+                # CASE B: Server Error
+                elif "500" in error_str or "overloaded" in error_str:
                     print(f"[WARN #{q_id}] Google Server Error. Waiting 10s...")
                     await asyncio.sleep(10)
                     attempts += 1
                     continue
 
                 # CASE C: Auth Error
-                elif "auth" in error_str or "login" in error_str or "cookie" in error_str:
+                elif "auth" in error_str or "login" in error_str:
                     print(f"[WARN #{q_id}] Auth invalid. Resetting client...")
                     async with self.async_lock:
                         self.client = None
@@ -225,7 +233,7 @@ class GeminiManager:
         return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
-        """Thread-safe entry point for Flask to call."""
+        """Thread-safe entry point."""
         with self.log_lock:
             self.query_counter += 1
             q_id = self.query_counter
@@ -246,7 +254,6 @@ class GeminiManager:
                 print(f"[STATUS #{q_id}] Success ✅")
             return result
         except Exception as e:
-            print(f"[STATUS #{q_id}] CRITICAL TIMEOUT/FAIL: {e} ❌")
             return f"Error: Request processing failed ({str(e)})"
 
 # ==================================================================================
@@ -256,10 +263,61 @@ app = Flask(__name__)
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-# Initialize Global Manager
 bot_manager = GeminiManager()
 
-# --- SERVER-SIDE API LIMITS (Protection for your own server) ---
+# --- STRESS TESTING THREAD ---
+STRESS_TEST_RUNNING = False
+
+def run_stress_test_loop():
+    global STRESS_TEST_RUNNING
+    print("\n[TEST] 🧪 STARTED: Stress Testing for Rate Limits...")
+
+    while STRESS_TEST_RUNNING:
+        # Check if we are already blocked
+        if bot_manager.is_rate_limited:
+            print("[TEST] 🛑 System reported Rate Limit! Test stopping.")
+            break
+
+        prompt = random.choice(TEST_PROMPTS)
+        print(f"[TEST] Sending: '{prompt}'")
+
+        result = bot_manager.query(prompt)
+
+        # Check result text for specific error messages
+        if "Rate limit reached" in result:
+            print("[TEST] 🛑 Received Rate Limit Error from Manager. Stopping.")
+            break
+
+        # Small buffer to prevent crashing the loop itself,
+        # but the manager has its own jitter too.
+        time.sleep(1)
+
+    STRESS_TEST_RUNNING = False
+    print("[TEST] 🏁 ENDED: Stress Test Complete.")
+
+@app.route('/api/test-limit', methods=['POST'])
+def api_test_limit():
+    global STRESS_TEST_RUNNING
+
+    if STRESS_TEST_RUNNING:
+        return jsonify({"status": "error", "message": "Test already running"}), 400
+
+    STRESS_TEST_RUNNING = True
+    thread = Thread(target=run_stress_test_loop, daemon=True)
+    thread.start()
+
+    return jsonify({
+        "status": "success",
+        "message": "Stress test started. Watch server console and 'rate_limit_events.log'."
+    })
+
+@app.route('/api/stop-test', methods=['POST'])
+def api_stop_test():
+    global STRESS_TEST_RUNNING
+    STRESS_TEST_RUNNING = False
+    return jsonify({"status": "success", "message": "Stopping test..."})
+
+# --- STANDARD API ---
 QUOTA_LOCK = Lock()
 SESSION_COUNTER = 0
 BLOCK_EXPIRATION = 0
@@ -269,39 +327,23 @@ COOLDOWN_SECONDS = 3600
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask():
     global SESSION_COUNTER, BLOCK_EXPIRATION
-
-    # --- QUOTA CHECK ---
     with QUOTA_LOCK:
         current_time = time.time()
-
-        if current_time < BLOCK_EXPIRATION:
+        if BLOCK_EXPIRATION > 0 and current_time < BLOCK_EXPIRATION:
             return jsonify({}), 200
-
         if BLOCK_EXPIRATION > 0 and current_time >= BLOCK_EXPIRATION:
             SESSION_COUNTER = 0
             BLOCK_EXPIRATION = 0
-            print("[SYSTEM] Server Block Expired. Counter reset.")
-
         SESSION_COUNTER += 1
-
         if SESSION_COUNTER >= MAX_REQUESTS:
             BLOCK_EXPIRATION = current_time + COOLDOWN_SECONDS
-            print(f"[SYSTEM] Limit reached. Blocking for 1 hour.")
             return jsonify({}), 200
 
-    # --- PROCESS ---
     try:
         data = request.get_json(silent=True) or {}
         prompt = data.get('prompt') or data.get('question')
-
-        if not prompt:
-            return jsonify({"error": "Missing prompt"}), 400
-
+        if not prompt: return jsonify({"error": "Missing prompt"}), 400
         result = bot_manager.query(prompt)
-
-        if result.startswith("Error"):
-            return jsonify({"status": "error", "message": result}), 500
-
         return jsonify({"status": "success", "answer": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -314,7 +356,6 @@ def web_index():
         answer = bot_manager.query(question)
         if answer.startswith("Error"):
             error, answer = answer, ""
-
     return render_template_string(HTML_TEMPLATE, answer=answer, question=question, error=error)
 
 HTML_TEMPLATE = """
@@ -324,10 +365,17 @@ HTML_TEMPLATE = """
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body class="p-5 bg-light">
     <div class="container" style="max-width: 800px;">
-        <h2 class="mb-4">🤖 Gemini API (Safe Mode)</h2>
-        <div class="alert alert-info">
-            <small>Features Active: Human Jitter (3-7s), Auto-429 Pause, Session Persistence.</small>
+        <h2 class="mb-4">🤖 Gemini API</h2>
+
+        <div class="card p-3 mb-4">
+            <h5>🧪 Stress Test Control</h5>
+            <div class="d-flex gap-2">
+                <button onclick="fetch('/api/test-limit', {method:'POST'}).then(r=>r.json()).then(d=>alert(d.message))" class="btn btn-warning">Start Stress Test</button>
+                <button onclick="fetch('/api/stop-test', {method:'POST'}).then(r=>r.json()).then(d=>alert(d.message))" class="btn btn-danger">Stop Test</button>
+            </div>
+            <small class="text-muted mt-2">Check console for live progress.</small>
         </div>
+
         <form method="post">
             <textarea name="question" class="form-control mb-3" rows="5" placeholder="Enter prompt...">{{question}}</textarea>
             <button class="btn btn-primary w-100">Submit</button>
