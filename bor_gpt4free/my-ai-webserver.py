@@ -17,7 +17,6 @@ gemini_src_path = os.path.join(current_dir, 'Gemini-API', 'src')
 if os.path.exists(gemini_src_path):
     sys.path.append(gemini_src_path)
 else:
-    # Optional: Don't exit hard if you want to run without the sub-repo for testing logic
     print(f"[WARNING] Missing folder: {gemini_src_path}")
 
 try:
@@ -30,13 +29,13 @@ except ImportError as e:
     sys.exit(1)
 
 # ==================================================================================
-# [CORE] PERSISTENT & SELF-HEALING MANAGER
+# [CORE] PERSISTENT MANAGER WITH CIRCUIT BREAKER
 # ==================================================================================
 class GeminiManager:
     def __init__(self):
         self.client = None
         self.loop = asyncio.new_event_loop()
-        self.async_lock = asyncio.Lock() # Async lock for client init
+        self.async_lock = asyncio.Lock()
         self.cookie_file = "gemini_cookies.json"
 
         # Logging / ID helpers
@@ -44,8 +43,12 @@ class GeminiManager:
         self.log_lock = Lock()
 
         # Configuration
-        self.generation_timeout = 120
-        self.total_timeout = 320
+        self.generation_timeout = 100
+        self.total_timeout = 300
+
+        # --- 429 CIRCUIT BREAKER ---
+        self.is_rate_limited = False
+        self.rate_limit_resume_time = 0
 
         # Start the background event loop
         self.thread = Thread(target=self._run_event_loop, daemon=True)
@@ -57,17 +60,18 @@ class GeminiManager:
         self.loop.run_forever()
 
     async def _ensure_client(self):
-        """
-        Checks if client exists. If it does, returns immediately.
-        If not, initializes it using the lock to prevent race conditions.
-        """
+        """Initializes the client if needed, respecting rate limits."""
         if self.client:
             return
 
-        # Double-check locking to ensure only one thread initializes
         async with self.async_lock:
-            if self.client: # Check again in case another thread beat us to it
+            if self.client:
                 return
+
+            # [CRITICAL] Stop initialization if we are in the penalty box
+            if self.is_rate_limited and time.time() < self.rate_limit_resume_time:
+                wait_time = int(self.rate_limit_resume_time - time.time())
+                raise Exception(f"Rate limit active. Waiting {wait_time}s cooldown.")
 
             print(f"[SYSTEM] Initializing new Gemini Client...")
 
@@ -92,24 +96,34 @@ class GeminiManager:
                     if k not in self.client.cookies:
                         self.client.cookies[k] = v
 
-                await self.client.init(timeout=50)
+                await self.client.init(timeout=40)
                 print("[SYSTEM] Gemini Client Successfully Initialized ✅")
+
+                # Reset circuit breaker on successful init
+                self.is_rate_limited = False
 
             except Exception as e:
                 print(f"[INIT ERROR] Failed to initialize GeminiClient: {e}")
-                self.client = None # Ensure it stays None so we retry next time
+                self.client = None
                 raise
 
     async def _execute_with_retry(self, prompt, q_id):
+        # 1. Check Circuit Breaker
+        if self.is_rate_limited:
+            remaining = self.rate_limit_resume_time - time.time()
+            if remaining > 0:
+                return f"Error: System is cooling down due to high traffic. Try again in {int(remaining)} seconds."
+            else:
+                self.is_rate_limited = False
+                print(f"[SYSTEM #{q_id}] Cooldown expired. Resuming operations.")
+
         attempts = 0
         max_attempts = 2
 
         while attempts < max_attempts:
             try:
-                # 1. Ensure client is ready (Fast return if already active)
                 await self._ensure_client()
 
-                # 2. Generate Content
                 response = await asyncio.wait_for(
                     self.client.generate_content(prompt),
                     timeout=self.generation_timeout
@@ -117,15 +131,26 @@ class GeminiManager:
                 return response.text
 
             except asyncio.TimeoutError:
-                print(f"[WARN #{q_id}] Attempt {attempts+1} timed out.")
+                print(f"[WARN #{q_id}] Timeout (Attempt {attempts+1})")
                 attempts += 1
+
             except Exception as e:
+                error_str = str(e).lower()
+
+                # [CRITICAL] 429 DETECTOR
+                if "429" in error_str or "too many requests" in error_str:
+                    print(f"[ALERT #{q_id}] 429 Rate Limit Detected! Pausing 2 mins. 🛑")
+                    self.is_rate_limited = True
+                    self.rate_limit_resume_time = time.time() + 120 # 2 Minute Pause
+                    return "Error: Rate limit reached. The system is pausing for 2 minutes."
+
                 print(f"[ERROR #{q_id}] Attempt {attempts+1} failed: {e}")
 
-                # Only reset client if it's a connection/API error,
-                # allowing _ensure_client to rebuild it on the next pass.
-                async with self.async_lock:
-                    self.client = None
+                # Only reset client if it looks like an auth/connection issue
+                # NOT if it's a rate limit issue
+                if "auth" in error_str or "login" in error_str or "cookie" in error_str:
+                    async with self.async_lock:
+                        self.client = None
 
                 attempts += 1
                 await asyncio.sleep(2)
@@ -138,11 +163,9 @@ class GeminiManager:
             self.query_counter += 1
             q_id = self.query_counter
 
-        # Basic prompt cleanup
         clean_prompt = prompt.strip()
         print(f"\n[QUERY #{q_id}] Processing...")
 
-        # Submit the async task to the background thread
         future = asyncio.run_coroutine_threadsafe(
             self._execute_with_retry(clean_prompt, q_id),
             self.loop
@@ -163,15 +186,13 @@ class GeminiManager:
 # [FLASK] APP SETUP
 # ==================================================================================
 app = Flask(__name__)
-
-# Reduce Flask logging clutter
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-# Initialize the manager ONCE globally
+# Initialize Global Manager
 bot_manager = GeminiManager()
 
-# --- RATE LIMIT CONFIGURATION ---
+# --- SERVER-SIDE RATE LIMIT CONFIG ---
 QUOTA_LOCK = Lock()
 SESSION_COUNTER = 0
 BLOCK_EXPIRATION = 0
@@ -182,29 +203,26 @@ COOLDOWN_SECONDS = 3600
 def api_ask():
     global SESSION_COUNTER, BLOCK_EXPIRATION
 
-    # --- RATE LIMIT LOGIC ---
+    # --- QUOTA CHECK ---
     with QUOTA_LOCK:
         current_time = time.time()
 
-        # Check active block
         if current_time < BLOCK_EXPIRATION:
             return jsonify({}), 200
 
-        # Reset block if time passed
         if BLOCK_EXPIRATION > 0 and current_time >= BLOCK_EXPIRATION:
             SESSION_COUNTER = 0
             BLOCK_EXPIRATION = 0
-            print("[SYSTEM] Block Expired. Counter reset.")
+            print("[SYSTEM] Server Block Expired. Counter reset.")
 
         SESSION_COUNTER += 1
 
-        # Check limit
         if SESSION_COUNTER >= MAX_REQUESTS:
             BLOCK_EXPIRATION = current_time + COOLDOWN_SECONDS
             print(f"[SYSTEM] Limit reached. Blocking for 1 hour.")
             return jsonify({}), 200
 
-    # --- PROCESS REQUEST ---
+    # --- PROCESS ---
     try:
         data = request.get_json(silent=True) or {}
         prompt = data.get('prompt') or data.get('question')
@@ -212,7 +230,6 @@ def api_ask():
         if not prompt:
             return jsonify({"error": "Missing prompt"}), 400
 
-        # Calls the existing global bot_manager instance
         result = bot_manager.query(prompt)
 
         if result.startswith("Error"):
@@ -222,7 +239,6 @@ def api_ask():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Optional Web Interface
 @app.route('/', methods=['GET', 'POST'])
 def web_index():
     answer, error, question = "", "", ""
