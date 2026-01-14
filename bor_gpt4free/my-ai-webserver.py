@@ -5,6 +5,7 @@ import asyncio
 import json
 import time
 import logging
+import random
 from threading import Lock, Thread
 from flask import Flask, request, render_template_string, jsonify
 
@@ -29,24 +30,30 @@ except ImportError as e:
     sys.exit(1)
 
 # ==================================================================================
-# [CORE] PERSISTENT MANAGER WITH CIRCUIT BREAKER
+# [CORE] PERSISTENT MANAGER (MULTI-ACCOUNT & ANTI-BOT)
 # ==================================================================================
 class GeminiManager:
     def __init__(self):
         self.client = None
         self.loop = asyncio.new_event_loop()
         self.async_lock = asyncio.Lock()
-        self.cookie_file = "gemini_cookies.json"
+
+        # --- [CONFIG] ACCOUNT MANAGEMENT ---
+        # List your cookie files here. If you have multiple, the system will rotate them on 429s.
+        self.cookie_files = ["gemini_cookies.json"]
+        # Example for multiple: ["gemini_cookies_1.json", "gemini_cookies_2.json"]
+
+        self.current_account_index = 0
 
         # Logging / ID helpers
         self.query_counter = 0
         self.log_lock = Lock()
 
-        # Configuration
+        # Timeouts
         self.generation_timeout = 100
         self.total_timeout = 300
 
-        # --- 429 CIRCUIT BREAKER ---
+        # --- CIRCUIT BREAKER ---
         self.is_rate_limited = False
         self.rate_limit_resume_time = 0
 
@@ -59,31 +66,47 @@ class GeminiManager:
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
+    def _get_current_cookie_file(self):
+        return self.cookie_files[self.current_account_index]
+
+    def _rotate_account(self):
+        """Switch to the next available account index."""
+        if len(self.cookie_files) > 1:
+            prev = self.current_account_index
+            self.current_account_index = (self.current_account_index + 1) % len(self.cookie_files)
+            print(f"[SYSTEM] 🔄 Rotating Account: {prev} -> {self.current_account_index}")
+            return True
+        return False
+
     async def _ensure_client(self):
         """Initializes the client if needed, respecting rate limits."""
         if self.client:
             return
 
         async with self.async_lock:
-            if self.client:
-                return
+            if self.client: return
 
-            # [CRITICAL] Stop initialization if we are in the penalty box
+            # [CHECK] If rate limited and we can't rotate accounts, we must wait
             if self.is_rate_limited and time.time() < self.rate_limit_resume_time:
                 wait_time = int(self.rate_limit_resume_time - time.time())
-                raise Exception(f"Rate limit active. Waiting {wait_time}s cooldown.")
+                raise Exception(f"System cooling down. Waiting {wait_time}s.")
 
-            print(f"[SYSTEM] Initializing new Gemini Client...")
+            target_cookie_file = self._get_current_cookie_file()
+            print(f"[SYSTEM] Initializing Client with: {target_cookie_file} ...")
 
-            if not os.path.exists(self.cookie_file):
-                print(f"[CRITICAL] Cookie file NOT FOUND at: {os.path.abspath(self.cookie_file)}")
-                raise FileNotFoundError(f"Missing {self.cookie_file}")
+            if not os.path.exists(target_cookie_file):
+                print(f"[CRITICAL] Cookie file NOT FOUND: {target_cookie_file}")
+                # Try to fall back to index 0 if specific file missing
+                if self.current_account_index != 0:
+                     self.current_account_index = 0
+                     print("[SYSTEM] Fallback to index 0")
+                     return await self._ensure_client()
+                raise FileNotFoundError(f"Missing {target_cookie_file}")
 
             try:
-                with open(self.cookie_file, 'r') as f:
+                with open(target_cookie_file, 'r') as f:
                     raw = json.load(f)
 
-                # Handle both list (EditThisCookie) and dict formats
                 cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
 
                 self.client = GeminiClient(
@@ -91,7 +114,17 @@ class GeminiManager:
                     secure_1psidts=cookies.get("__Secure-1PSIDTS")
                 )
 
-                # Load remaining cookies
+                # [STRATEGY] User-Agent Rotation
+                # We try to inject a random UA if possible to avoid fingerprinting
+                user_agents = [
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+                ]
+                # Note: gemini_webapi might overwrite this, but we try anyway
+                if hasattr(self.client, "session"):
+                    self.client.session.headers["User-Agent"] = random.choice(user_agents)
+
                 for k, v in cookies.items():
                     if k not in self.client.cookies:
                         self.client.cookies[k] = v
@@ -99,23 +132,31 @@ class GeminiManager:
                 await self.client.init(timeout=40)
                 print("[SYSTEM] Gemini Client Successfully Initialized ✅")
 
-                # Reset circuit breaker on successful init
+                # Clear rate limit flag on success
                 self.is_rate_limited = False
 
             except Exception as e:
-                print(f"[INIT ERROR] Failed to initialize GeminiClient: {e}")
+                print(f"[INIT ERROR] Failed to initialize: {e}")
                 self.client = None
                 raise
 
     async def _execute_with_retry(self, prompt, q_id):
-        # 1. Check Circuit Breaker
+        # 1. Circuit Breaker Check
         if self.is_rate_limited:
             remaining = self.rate_limit_resume_time - time.time()
             if remaining > 0:
-                return f"Error: System is cooling down due to high traffic. Try again in {int(remaining)} seconds."
+                # If we have multiple accounts, we shouldn't be blocked here unless ALL failed.
+                # But for simplicity, if flag is raised, we block.
+                return f"Error: System cooling down ({int(remaining)}s remaining)."
             else:
                 self.is_rate_limited = False
-                print(f"[SYSTEM #{q_id}] Cooldown expired. Resuming operations.")
+                print(f"[SYSTEM #{q_id}] Cooldown expired. Resuming.")
+
+        # [STRATEGY] Human Jitter
+        # Random sleep 3-7 seconds to act like a human
+        jitter = random.uniform(3, 7)
+        print(f"[SYSTEM #{q_id}] ⏳ Human Jitter: Sleeping {jitter:.2f}s...")
+        await asyncio.sleep(jitter)
 
         attempts = 0
         max_attempts = 2
@@ -136,24 +177,44 @@ class GeminiManager:
 
             except Exception as e:
                 error_str = str(e).lower()
+                print(f"[ERROR #{q_id}] {e}")
 
-                # [CRITICAL] 429 DETECTOR
+                # --- ERROR STRATEGY ---
+
+                # CASE A: Rate Limit (429)
                 if "429" in error_str or "too many requests" in error_str:
-                    print(f"[ALERT #{q_id}] 429 Rate Limit Detected! Pausing 5 mins. 🛑")
-                    self.is_rate_limited = True
-                    self.rate_limit_resume_time = time.time() + 360 # 5 Minute Pause
-                    return "Error: Rate limit reached. The system is pausing for 5 minutes."
+                    print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
 
-                print(f"[ERROR #{q_id}] Attempt {attempts+1} failed: {e}")
+                    # Try to rotate account
+                    rotated = self._rotate_account()
+                    if rotated:
+                        print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying immediately...")
+                        async with self.async_lock:
+                            self.client = None # Reset so next loop picks up new file
+                        attempts += 1
+                        continue # Retry loop immediately
+                    else:
+                        # No other accounts? Pause.
+                        self.is_rate_limited = True
+                        self.rate_limit_resume_time = time.time() + 180 # 3 Mins
+                        return "Error: Rate limit reached. Pausing for 3 minutes."
 
-                # Only reset client if it looks like an auth/connection issue
-                # NOT if it's a rate limit issue
-                if "auth" in error_str or "login" in error_str or "cookie" in error_str:
+                # CASE B: Server Error (500/503) - DO NOT RESET CLIENT
+                elif "500" in error_str or "503" in error_str or "overloaded" in error_str:
+                    print(f"[WARN #{q_id}] Google Server Error. Waiting 10s...")
+                    await asyncio.sleep(10)
+                    attempts += 1
+                    # Do NOT set self.client = None. Keep session.
+                    continue
+
+                # CASE C: Auth Error - Reset Client
+                elif "auth" in error_str or "login" in error_str or "cookie" in error_str:
+                    print(f"[WARN #{q_id}] Auth invalid. Resetting client...")
                     async with self.async_lock:
                         self.client = None
 
                 attempts += 1
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
 
         return "Error: Failed to generate response after retries."
 
@@ -192,7 +253,7 @@ log.setLevel(logging.ERROR)
 # Initialize Global Manager
 bot_manager = GeminiManager()
 
-# --- SERVER-SIDE RATE LIMIT CONFIG ---
+# --- SERVER-SIDE API LIMITS (Protection for your own server) ---
 QUOTA_LOCK = Lock()
 SESSION_COUNTER = 0
 BLOCK_EXPIRATION = 0
@@ -253,11 +314,14 @@ def web_index():
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
-<head><title>Gemini API</title>
+<head><title>Gemini API (Safe Mode)</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body class="p-5 bg-light">
     <div class="container" style="max-width: 800px;">
-        <h2 class="mb-4">🤖 Gemini API Interface</h2>
+        <h2 class="mb-4">🤖 Gemini API (Safe Mode)</h2>
+        <div class="alert alert-info">
+            <small>Features Active: Human Jitter (3-7s), Auto-429 Pause, Session Persistence.</small>
+        </div>
         <form method="post">
             <textarea name="question" class="form-control mb-3" rows="5" placeholder="Enter prompt...">{{question}}</textarea>
             <button class="btn btn-primary w-100">Submit</button>
