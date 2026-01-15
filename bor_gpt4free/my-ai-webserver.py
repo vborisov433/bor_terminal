@@ -4,6 +4,7 @@ import os
 import asyncio
 import json
 import time
+import datetime
 import logging
 import random
 from threading import Lock, Thread
@@ -342,54 +343,49 @@ def api_stop_test():
 # [FLASK] API ROUTE WITH LOG THROTTLING
 # ==================================================================================
 QUOTA_LOCK = Lock()
-SESSION_COUNTER = 0
-BLOCK_EXPIRATION = 0
-MAX_REQUESTS = 50
-COOLDOWN_SECONDS = 1000
+MAX_HOURLY_REQUESTS = 50
 
-# [NEW] Log Throttler Variable
-LAST_LOG_TIME = 0 
+# State Tracking
+CURRENT_HOUR_TRACKER = -1  # Keeps track of which hour we are in (0-23)
+SESSION_COUNTER = 0        # Counts requests in the current hour
+LAST_LOG_TIME = 0          # For log throttling
 
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask():
-    global SESSION_COUNTER, BLOCK_EXPIRATION, LAST_LOG_TIME
-
-    # Note: We do NOT print "New Request Received" here anymore to reduce spam
+    global SESSION_COUNTER, CURRENT_HOUR_TRACKER, LAST_LOG_TIME
 
     with QUOTA_LOCK:
-        current_time = time.time()
+        now = datetime.datetime.now()
+        this_hour = now.hour  # e.g., 14 for 2 PM
 
-        # 1. Check if we are currently in a cooldown block
-        if BLOCK_EXPIRATION > 0 and current_time < BLOCK_EXPIRATION:
-            # [FIX] Log Throttling: Only print this message once every 5 seconds
-            if current_time - LAST_LOG_TIME > 5:
-                remaining = int(BLOCK_EXPIRATION - current_time)
-                print(f"[API] ⛔ Blocked: Cooldown active ({remaining}s remaining) - Suppressing further logs...")
-                LAST_LOG_TIME = current_time
+        # 1. NEW HOUR CHECK: If the clock has struck a new hour, reset everything
+        if this_hour != CURRENT_HOUR_TRACKER:
+            print(f"[SYSTEM] 🕒 New Hour Detected ({this_hour}:00). Resetting Quota.")
+            CURRENT_HOUR_TRACKER = this_hour
+            SESSION_COUNTER = 0
 
-            # Return empty response immediately (Status 200 to stop clients from retrying errors)
+        # 2. LIMIT CHECK: Have we hit the limit for this specific clock hour?
+        if SESSION_COUNTER >= MAX_HOURLY_REQUESTS:
+            # Calculate time remaining until the next hour starts
+            next_hour = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+            seconds_left = int((next_hour - now).total_seconds())
+
+            # Log Throttling: Print warning only once every 10 seconds
+            if time.time() - LAST_LOG_TIME > 10:
+                print(f"[API] ⛔ HOURLY LIMIT REACHED ({SESSION_COUNTER}/{MAX_HOURLY_REQUESTS}). Dropping requests until next hour ({seconds_left}s remaining).")
+                LAST_LOG_TIME = time.time()
+
+            # Drop request (Return 200 OK with empty body to prevent client retries)
             return jsonify({}), 200
 
-        # 2. If block has expired, reset counters
-        if BLOCK_EXPIRATION > 0 and current_time >= BLOCK_EXPIRATION:
-            SESSION_COUNTER = 0
-            BLOCK_EXPIRATION = 0
-            print("[SYSTEM] 🟢 Server Block Expired. Counter reset. Accepting traffic.")
-
-        # 3. Increment Request Counter
+        # 3. INCREMENT: Count this valid request
         SESSION_COUNTER += 1
 
-        # Only print every 10th request to keep console clean
-        if SESSION_COUNTER % 10 == 0:
-            print(f"[API] Request #{SESSION_COUNTER} (Limit: {MAX_REQUESTS})")
+        # Log progress occasionally
+        if SESSION_COUNTER % 5 == 0:
+            print(f"[API] 📊 Hourly Quota: {SESSION_COUNTER}/{MAX_HOURLY_REQUESTS}")
 
-        # 4. Check if we just hit the limit
-        if SESSION_COUNTER >= MAX_REQUESTS:
-            BLOCK_EXPIRATION = current_time + COOLDOWN_SECONDS
-            print(f"[API] 🚨 MAX_REQUESTS REACHED! Blocking incoming traffic for {COOLDOWN_SECONDS}s.")
-            return jsonify({}), 200
-
-    # 5. Process the Request (Only if not blocked)
+    # 4. PROCESS: Only if we passed the checks above
     try:
         data = request.get_json(silent=True) or {}
         prompt = data.get('prompt') or data.get('question')
