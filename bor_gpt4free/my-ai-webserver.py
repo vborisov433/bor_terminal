@@ -61,7 +61,9 @@ TEST_PROMPTS = [
 class GeminiManager:
     def __init__(self):
         self.client = None
-        self.chat = None  # [NEW] Persistent Chat Session
+        self.chat = None
+        self.chat_request_count = 0  # [NEW] Track requests per session
+        self.MAX_CHAT_TURNS = 30     # [NEW] Limit before rotation
 
         self.loop = asyncio.new_event_loop()
         self.async_lock = asyncio.Lock()
@@ -88,7 +90,6 @@ class GeminiManager:
         self.thread.start()
 
     def _run_event_loop(self):
-        """Runs the asyncio loop in a separate thread forever."""
         asyncio.set_event_loop(self.loop)
         self.loop.run_forever()
 
@@ -96,48 +97,49 @@ class GeminiManager:
         return self.cookie_files[self.current_account_index]
 
     def _rotate_account(self):
-        """Switch to the next available account index."""
         if len(self.cookie_files) > 1:
             prev = self.current_account_index
             self.current_account_index = (self.current_account_index + 1) % len(self.cookie_files)
             print(f"[SYSTEM] 🔄 Rotating Account: {prev} -> {self.current_account_index}")
-
-            # [NEW] Clear chat session on rotation so we start fresh
+            # Reset session on account switch
             self.chat = None
+            self.chat_request_count = 0
             return True
         return False
 
     def _log_rate_limit(self, q_id):
-        """Writes the 429 event to a file."""
         try:
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
             msg = f"[{timestamp}] HIT 429 ERROR at Request #{q_id}\n"
             with open(self.rate_limit_log, "a") as f:
                 f.write(msg)
-            print(f"[LOGGING] 📝 Recorded 429 event for Request #{q_id} to {self.rate_limit_log}")
         except Exception as e:
-            print(f"[LOGGING ERROR] Could not write to log file: {e}")
+            print(f"[LOGGING ERROR] {e}")
 
     async def _ensure_client(self):
-        """Initializes the client if needed, respecting rate limits."""
+        """Initializes the client if needed."""
         if self.client:
             return
 
         async with self.async_lock:
             if self.client: return
 
-            if self.is_rate_limited and time.time() < self.rate_limit_resume_time:
-                wait_time = int(self.rate_limit_resume_time - time.time())
-                raise Exception(f"System cooling down. Waiting {wait_time}s.")
+            # Circuit Breaker Check
+            if self.is_rate_limited:
+                if time.time() < self.rate_limit_resume_time:
+                    wait_time = int(self.rate_limit_resume_time - time.time())
+                    raise Exception(f"System cooling down. Waiting {wait_time}s.")
+                else:
+                    self.is_rate_limited = False
 
             target_cookie_file = self._get_current_cookie_file()
 
             if not os.path.exists(target_cookie_file):
-                print(f"[CRITICAL] Cookie file NOT FOUND: {target_cookie_file}")
-                if self.current_account_index != 0:
+                 print(f"[CRITICAL] Cookie file missing: {target_cookie_file}")
+                 if self.current_account_index != 0:
                      self.current_account_index = 0
                      return await self._ensure_client()
-                raise FileNotFoundError(f"Missing {target_cookie_file}")
+                 raise FileNotFoundError(f"Missing {target_cookie_file}")
 
             try:
                 with open(target_cookie_file, 'r') as f:
@@ -156,6 +158,7 @@ class GeminiManager:
                 ]
                 if hasattr(self.client, "session"):
                     self.client.session.headers["User-Agent"] = random.choice(user_agents)
+                    self.client.session.headers["Referer"] = "https://gemini.google.com/"
 
                 for k, v in cookies.items():
                     if k not in self.client.cookies:
@@ -163,19 +166,18 @@ class GeminiManager:
 
                 await self.client.init(timeout=40)
 
-                # [NEW] Reset chat session when client is re-initialized
+                # Reset chat state on fresh client init
                 self.chat = None
-
-                self.is_rate_limited = False
+                self.chat_request_count = 0
+                print(f"[SYSTEM] Client Initialized (Account: {self.current_account_index})")
 
             except Exception as e:
-                print(f"[INIT ERROR] Failed to initialize: {e}")
+                print(f"[INIT ERROR] {e}")
                 self.client = None
-                self.chat = None
                 raise
 
     async def _execute_with_retry(self, prompt, q_id):
-        # 1. Circuit Breaker
+        # 1. Circuit Breaker Check
         if self.is_rate_limited:
             remaining = self.rate_limit_resume_time - time.time()
             if remaining > 0:
@@ -183,9 +185,8 @@ class GeminiManager:
             else:
                 self.is_rate_limited = False
 
-        # [STRATEGY] Human Jitter
-        jitter = random.uniform(3, 7)
-        print(f"[SYSTEM #{q_id}] ⏳ Human Jitter: Sleeping {jitter:.2f}s...")
+        # 2. Jitter
+        jitter = random.uniform(4, 8)
         await asyncio.sleep(jitter)
 
         attempts = 0
@@ -195,17 +196,22 @@ class GeminiManager:
             try:
                 await self._ensure_client()
 
-                # [NEW] Chat Persistence Logic
-                # If we don't have an active chat session, start one.
-                if self.chat is None:
-                    print(f"[SYSTEM #{q_id}] 🆕 Starting new Chat Session...")
-                    # Note: Most wrappers use start_chat(). If your specific lib uses a different
-                    # method name, this line might need adjustment.
+                # [LOGIC] 30-Request Rotation Strategy
+                # If chat is missing OR we hit the limit, start fresh.
+                if self.chat is None or self.chat_request_count >= self.MAX_CHAT_TURNS:
+                    reason = "Limit Reached" if self.chat else "New Session"
+                    print(f"[SYSTEM #{q_id}] 🔄 Rotating Chat Session ({reason})...")
                     self.chat = self.client.start_chat()
+                    self.chat_request_count = 0
 
-                # Send message to the existing chat instead of generating new content
+                # Increment counter BEFORE sending (safe in single-threaded event loop)
+                self.chat_request_count += 1
+
+                # Use local reference to avoid race conditions if reset happens during await
+                active_chat = self.chat
+
                 response = await asyncio.wait_for(
-                    self.chat.send_message(prompt),
+                    active_chat.send_message(prompt),
                     timeout=self.generation_timeout
                 )
                 return response.text
@@ -227,31 +233,28 @@ class GeminiManager:
                         print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
                         async with self.async_lock:
                             self.client = None
-                            self.chat = None # Reset chat
+                            self.chat = None # Force reset
                         attempts += 1
                         continue
                     else:
                         self.is_rate_limited = True
-                        self.rate_limit_resume_time = time.time() + 180
-                        return "Error: Rate limit reached. Pausing for 3 minutes."
+                        self.rate_limit_resume_time = time.time() + 1200 # 20 min cool down
+                        return "Error: Rate limit reached. Pausing for 20 minutes."
 
-                # CASE B: Server Error
-                elif "500" in error_str or "overloaded" in error_str:
-                    print(f"[WARN #{q_id}] Google Server Error. Waiting 10s...")
-                    await asyncio.sleep(10)
-                    attempts += 1
-                    continue
-
-                # CASE C: Auth Error / Chat Error
-                # If the chat is invalid (expired), we reset client and chat
+                # CASE B: Session Invalid
                 elif "auth" in error_str or "login" in error_str or "session" in error_str:
-                    print(f"[WARN #{q_id}] Session/Auth invalid. Resetting client...")
+                    print(f"[WARN #{q_id}] Session Invalid. Resetting...")
                     async with self.async_lock:
                         self.client = None
-                        self.chat = None
+                        self.chat = None # Force reset
+                        self.chat_request_count = 0
+
+                # CASE C: Server Error
+                elif "500" in error_str:
+                     await asyncio.sleep(10)
 
                 attempts += 1
-                await asyncio.sleep(3)
+                await asyncio.sleep(5)
 
         return "Error: Failed to generate response after retries."
 
@@ -260,6 +263,9 @@ class GeminiManager:
         with self.log_lock:
             self.query_counter += 1
             q_id = self.query_counter
+
+        if self.is_rate_limited and time.time() < self.rate_limit_resume_time:
+             return f"Error: System cooling down ({int(self.rate_limit_resume_time - time.time())}s remaining)."
 
         clean_prompt = prompt.strip()
         print(f"\n[QUERY #{q_id}] Processing...")
@@ -271,10 +277,6 @@ class GeminiManager:
 
         try:
             result = future.result(timeout=self.total_timeout)
-            if result.startswith("Error"):
-                print(f"[STATUS #{q_id}] Failed ❌")
-            else:
-                print(f"[STATUS #{q_id}] Success ✅")
             return result
         except Exception as e:
             return f"Error: Request processing failed ({str(e)})"
