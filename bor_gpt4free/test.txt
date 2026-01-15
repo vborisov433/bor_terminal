@@ -1,0 +1,977 @@
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 1s
+127.0.0.1 - - [09/Jan/2026 18:04:28] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[TASK] Processing ...
+2026-01-09 18:06:22.807 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:162 - Skipping loading local browser cookies. Optional dependency 'browser-cookie3' is not installed.
+2026-01-09 18:06:24.353 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:180 - Init attempt (1/2) succeeded. Initializing client...
+[Gemini Internal Error] Event loop is closed
+[TASK] Completed in 2.12s
+[API] Worker Failed: ERROR_INTERNAL: Event loop is closed...
+127.0.0.1 - - [09/Jan/2026 18:06:24] "POST /api/ask-gpt HTTP/1.1" 500 -
+
+[API] POST /api/ask-gpt
+[TASK] Processing ...
+2026-01-09 18:06:29.945 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:162 - Skipping loading local browser cookies. Optional dependency 'browser-cookie3' is not installed.
+2026-01-09 18:06:31.416 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:180 - Init attempt (1/2) succeeded. Initializing client...
+2026-01-09 18:06:31.523 | SUCCESS  | gemini_webapi.client:init:172 - Gemini client initialized successfully.
+Task was destroyed but it is pending!
+task: <Task cancelling name='Task-155' coro=<GeminiClient.start_auto_refresh() running at /home/so/.local/lib/python3.11/site-packages/gemini_webapi/client.py:235> wait_for=<Future cancelled>>
+2026-01-09 18:06:31.882 | DEBUG    | gemini_webapi.client:start_auto_refresh:233 - Cookies refreshed. New __Secure-1PSIDTS applied.
+[Gemini Internal Error] Failed to generate contents. Request failed with status code 429
+[TASK] Completed in 11.26s
+[API] Worker Failed: ERROR_INTERNAL: Failed to generate contents. Reque...
+127.0.0.1 - - [09/Jan/2026 18:06:40] "POST /api/ask-gpt HTTP/1.1" 500 -
+
+[API] POST /api/ask-gpt
+[TASK] Processing ...
+2026-01-09 18:07:15.785 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:162 - Skipping loading local browser cookies. Optional dependency 'browser-cookie3' is not installed.
+2026-01-09 18:07:17.234 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:185 - Init attempt (1/2) failed. Cookies invalid.
+2026-01-09 18:07:17.434 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:180 - Init attempt (2/2) succeeded. Initializing client...
+[Gemini Internal Error] Event loop is closed
+[TASK] Completed in 2.26s
+[API] Worker Failed: ERROR_INTERNAL: Event loop is closed...
+127.0.0.1 - - [09/Jan/2026 18:07:17] "POST /api/ask-gpt HTTP/1.1" 500 -
+
+[API] POST /api/ask-gpt
+[TASK] Processing ...
+2026-01-09 18:07:18.069 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:162 - Skipping loading local browser cookies. Optional dependency 'browser-cookie3' is not installed.
+2026-01-09 18:07:19.460 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:180 - Init attempt (1/2) succeeded. Initializing client...
+2026-01-09 18:07:19.589 | SUCCESS  | gemini_webapi.client:init:172 - Gemini client initialized successfully.
+Task was destroyed but it is pending!
+task: <Task cancelling name='Task-224' coro=<GeminiClient.start_auto_refresh() running at /home/so/.local/lib/python3.11/site-packages/gemini_webapi/client.py:235> wait_for=<Future cancelled>>
+[Gemini Internal Error] Failed to generate contents. Request failed with status code 429
+[TASK] Completed in 10.40s
+[API] Worker Failed: ERROR_INTERNAL: Failed to generate contents. Reque...
+127.0.0.1 - - [09/Jan/2026 18:07:28] "POST /api/ask-gpt HTTP/1.1" 500 -
+
+[API] POST /api/ask-gpt
+[TASK] Processing ...
+2026-01-09 18:07:28.522 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:162 - Skipping loading local browser cookies. Optional dependency 'browser-cookie3' is not installed.
+2026-01-09 18:07:30.173 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:180 - Init attempt (1/2) succeeded. Initializing client...
+[Gemini Internal Error] Event loop is closed
+[TASK] Completed in 2.27s
+[API] Worker Failed: ERROR_INTERNAL: Event loop is closed...
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 500 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 6s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 6s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 6s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 6s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 6s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[LIMIT] Throttled. Wait 5s
+127.0.0.1 - - [09/Jan/2026 18:07:30] "POST /api/ask-gpt HTTP/1.1" 429 -
+
+[API] POST /api/ask-gpt
+[TASK] Processing ...
+2026-01-09 18:07:55.295 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:162 - Skipping loading local browser cookies. Optional dependency 'browser-cookie3' is not installed.
+2026-01-09 18:07:56.597 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:180 - Init attempt (1/2) succeeded. Initializing client...
+2026-01-09 18:07:56.710 | SUCCESS  | gemini_webapi.client:init:172 - Gemini client initialized successfully.
+Task was destroyed but it is pending!
+task: <Task cancelling name='Task-293' coro=<GeminiClient.start_auto_refresh() running at /home/so/.local/lib/python3.11/site-packages/gemini_webapi/client.py:235> wait_for=<Future cancelled>>
+2026-01-09 18:07:57.080 | DEBUG    | gemini_webapi.client:start_auto_refresh:233 - Cookies refreshed. New __Secure-1PSIDTS applied.
+[Gemini Internal Error] Failed to generate contents. Request failed with status code 429
+[TASK] Completed in 9.58s
+[API] Worker Failed: ERROR_INTERNAL: Failed to generate contents. Reque...
+127.0.0.1 - - [09/Jan/2026 18:08:04] "POST /api/ask-gpt HTTP/1.1" 500 -
+^Cso@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ git pull
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 4 (delta 3), reused 4 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 566 bytes | 26.00 KiB/s, done.
+From https://github.com/vborisov433/bor_terminal
+   d184241..910b6f3  main       -> origin/main
+Updating d184241..910b6f3
+Fast-forward
+ bor_gpt4free/gemini_cookies.json | 17 ++---------------
+ 1 file changed, 2 insertions(+), 15 deletions(-)
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ python my-ai-webserver.py 
+[SYS] Server running at http://0.0.0.0:5000
+ * Serving Flask app 'my-ai-webserver'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://15.0.1.50:5000
+Press CTRL+C to quit
+ * Restarting with stat
+[SYS] Server running at http://0.0.0.0:5000
+ * Debugger is active!
+ * Debugger PIN: 302-760-776
+
+[API] POST /api/ask-gpt
+[TASK] Processing ...
+2026-01-13 14:51:09.749 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:106 - Skipping loading cached cookies. Cache file not found.
+2026-01-13 14:51:09.749 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:162 - Skipping loading local browser cookies. Optional dependency 'browser-cookie3' is not installed.
+2026-01-13 14:51:10.111 | DEBUG    | gemini_webapi.utils.get_access_token:get_access_token:180 - Init attempt (1/1) succeeded. Initializing client...
+2026-01-13 14:51:10.290 | SUCCESS  | gemini_webapi.client:init:172 - Gemini client initialized successfully.
+2026-01-13 14:51:10.651 | DEBUG    | gemini_webapi.client:start_auto_refresh:233 - Cookies refreshed. New __Secure-1PSIDTS applied.
+[Gemini Internal Error] Generate content request timed out, please try again. If the problem persists, consider setting a higher `timeout` value when initializing GeminiClient.
+[TASK] Completed in 31.35s
+
+==============================
+ [API] !!! CRITICAL EXCEPTION !!!
+==============================
+Error Type:    TimeoutError
+Error Message: 
+------------------------------
+ [FAILED PROMPT / DATA] 
+> PROMPT: from NEWS title: 
+Stocks making the biggest moves premarket: L3Harris, JPMorgan, Delta, Intel, AMD and more
+from NEWS content: 
+
+
+for markets: dow, audjpy, audusd, dxy, fed interest rate, dax, cac 40
+give: market sentiment , short summary
+return in json
+for each market in format:
+
+"markets": [
+{
+   "magnitude": "", // classify from 1 min to 10 max
+   "market": "",
+   "sentiment": "Bearish or Bullish or Neutral",
+   "reason": "...",
+   "keywords": [],
+   "categories": []
+}
+],
+"article_info": {
+   "has_market_impact": false or true,
+   "title_headline": "",
+   "news_surprise_index": 0, // classify from 1 min to 10 max
+   "economy_impact": 0, // classify from 1 min to 10 max
+   "macro_keyword_heatmap": [],
+   "summary": ""
+}
+------------------------------
+ [STACK TRACE] 
+Traceback (most recent call last):
+  File "/var/www/bor_terminal/bor_gpt4free/my-ai-webserver.py", line 203, in ask_gpt
+    bot_response = future.result(timeout=DEFAULT_TIMEOUT)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/concurrent/futures/_base.py", line 458, in result
+    raise TimeoutError()
+TimeoutError
+
+==============================
+
+127.0.0.1 - - [13/Jan/2026 14:51:40] "POST /api/ask-gpt HTTP/1.1" 500 -
+^Cso@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ ls
+g4f         gemini_cookies.json       get_cookies.py  LOGS                MY-README.md
+Gemini-API  gemini_manager_debug.log  gpt4free        my-ai-webserver.py  rate_limit_events.log
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ cat rate_limit_events.log 
+g4f/                      gemini_manager_debug.log  LOGS/                     rate_limit_events.log
+Gemini-API/               get_cookies.py            my-ai-webserver.py        
+gemini_cookies.json       gpt4free/                 MY-README.md              
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ cat rate_limit_events.log 
+[2026-01-14 19:23:17] HIT 429 ERROR at Request #1
+[2026-01-14 20:29:02] HIT 429 ERROR at Request #50
+[2026-01-14 21:59:22] HIT 429 ERROR at Request #32
+[2026-01-14 21:59:37] HIT 429 ERROR at Request #34
+[2026-01-14 22:16:49] HIT 429 ERROR at Request #50
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ cat rate_limit_events.log 
+[2026-01-14 19:23:17] HIT 429 ERROR at Request #1
+[2026-01-14 20:29:02] HIT 429 ERROR at Request #50
+[2026-01-14 21:59:22] HIT 429 ERROR at Request #32
+[2026-01-14 21:59:37] HIT 429 ERROR at Request #34
+[2026-01-14 22:16:49] HIT 429 ERROR at Request #50
+[2026-01-14 22:48:28] HIT 429 ERROR at Request #1
+[2026-01-14 23:01:26] HIT 429 ERROR at Request #1
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ cat rate_limit_events.log 
+[2026-01-14 19:23:17] HIT 429 ERROR at Request #1
+[2026-01-14 20:29:02] HIT 429 ERROR at Request #50
+[2026-01-14 21:59:22] HIT 429 ERROR at Request #32
+[2026-01-14 21:59:37] HIT 429 ERROR at Request #34
+[2026-01-14 22:16:49] HIT 429 ERROR at Request #50
+[2026-01-14 22:48:28] HIT 429 ERROR at Request #1
+[2026-01-14 23:01:26] HIT 429 ERROR at Request #1
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ nano rate_limit_events.log 
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ cat rate_limit_events.log 
+[2026-01-14 19:23:17] HIT 429 ERROR at Request #1
+[2026-01-14 20:29:02] HIT 429 ERROR at Request #50
+[2026-01-14 21:59:22] HIT 429 ERROR at Request #32
+[2026-01-14 21:59:37] HIT 429 ERROR at Request #34
+[2026-01-14 22:16:49] HIT 429 ERROR at Request #50
+[2026-01-14 22:48:28] HIT 429 ERROR at Request #1
+[2026-01-14 23:01:26] HIT 429 ERROR at Request #1
+reset is here--
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ cat rate_limit_events.log 
+[2026-01-14 19:23:17] HIT 429 ERROR at Request #1
+[2026-01-14 20:29:02] HIT 429 ERROR at Request #50
+[2026-01-14 21:59:22] HIT 429 ERROR at Request #32
+[2026-01-14 21:59:37] HIT 429 ERROR at Request #34
+[2026-01-14 22:16:49] HIT 429 ERROR at Request #50
+[2026-01-14 22:48:28] HIT 429 ERROR at Request #1
+[2026-01-14 23:01:26] HIT 429 ERROR at Request #1
+reset is here--
+[2026-01-15 01:59:31] HIT 429 ERROR at Request #196
+[2026-01-15 02:16:22] HIT 429 ERROR at Request #197
+[2026-01-15 02:34:26] HIT 429 ERROR at Request #246
+[2026-01-15 02:52:22] HIT 429 ERROR at Request #295
+[2026-01-15 03:10:29] HIT 429 ERROR at Request #344
+[2026-01-15 03:28:31] HIT 429 ERROR at Request #393
+[2026-01-15 03:46:25] HIT 429 ERROR at Request #442
+[2026-01-15 04:04:38] HIT 429 ERROR at Request #491
+[2026-01-15 04:27:04] HIT 429 ERROR at Request #558
+[2026-01-15 04:46:32] HIT 429 ERROR at Request #589
+[2026-01-15 05:04:25] HIT 429 ERROR at Request #638
+[2026-01-15 05:22:34] HIT 429 ERROR at Request #687
+[2026-01-15 05:40:33] HIT 429 ERROR at Request #736
+[2026-01-15 05:58:35] HIT 429 ERROR at Request #785
+[2026-01-15 06:16:38] HIT 429 ERROR at Request #834
+[2026-01-15 06:34:40] HIT 429 ERROR at Request #883
+[2026-01-15 08:51:34] HIT 429 ERROR at Request #1146
+[2026-01-15 08:51:46] HIT 429 ERROR at Request #1147
+[2026-01-15 09:10:24] HIT 429 ERROR at Request #1177
+[2026-01-15 09:28:09] HIT 429 ERROR at Request #1226
+[2026-01-15 09:46:22] HIT 429 ERROR at Request #1275
+[2026-01-15 10:04:14] HIT 429 ERROR at Request #1324
+[2026-01-15 10:22:09] HIT 429 ERROR at Request #1373
+[2026-01-15 10:40:26] HIT 429 ERROR at Request #1422
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ cat rate_limit_events.log 
+[2026-01-14 19:23:17] HIT 429 ERROR at Request #1
+[2026-01-14 20:29:02] HIT 429 ERROR at Request #50
+[2026-01-14 21:59:22] HIT 429 ERROR at Request #32
+[2026-01-14 21:59:37] HIT 429 ERROR at Request #34
+[2026-01-14 22:16:49] HIT 429 ERROR at Request #50
+[2026-01-14 22:48:28] HIT 429 ERROR at Request #1
+[2026-01-14 23:01:26] HIT 429 ERROR at Request #1
+reset is here--
+[2026-01-15 01:59:31] HIT 429 ERROR at Request #196
+[2026-01-15 02:16:22] HIT 429 ERROR at Request #197
+[2026-01-15 02:34:26] HIT 429 ERROR at Request #246
+[2026-01-15 02:52:22] HIT 429 ERROR at Request #295
+[2026-01-15 03:10:29] HIT 429 ERROR at Request #344
+[2026-01-15 03:28:31] HIT 429 ERROR at Request #393
+[2026-01-15 03:46:25] HIT 429 ERROR at Request #442
+[2026-01-15 04:04:38] HIT 429 ERROR at Request #491
+[2026-01-15 04:27:04] HIT 429 ERROR at Request #558
+[2026-01-15 04:46:32] HIT 429 ERROR at Request #589
+[2026-01-15 05:04:25] HIT 429 ERROR at Request #638
+[2026-01-15 05:22:34] HIT 429 ERROR at Request #687
+[2026-01-15 05:40:33] HIT 429 ERROR at Request #736
+[2026-01-15 05:58:35] HIT 429 ERROR at Request #785
+[2026-01-15 06:16:38] HIT 429 ERROR at Request #834
+[2026-01-15 06:34:40] HIT 429 ERROR at Request #883
+[2026-01-15 08:51:34] HIT 429 ERROR at Request #1146
+[2026-01-15 08:51:46] HIT 429 ERROR at Request #1147
+[2026-01-15 09:10:24] HIT 429 ERROR at Request #1177
+[2026-01-15 09:28:09] HIT 429 ERROR at Request #1226
+[2026-01-15 09:46:22] HIT 429 ERROR at Request #1275
+[2026-01-15 10:04:14] HIT 429 ERROR at Request #1324
+[2026-01-15 10:22:09] HIT 429 ERROR at Request #1373
+[2026-01-15 10:40:26] HIT 429 ERROR at Request #1422
+[2026-01-15 10:58:11] HIT 429 ERROR at Request #1471
+[2026-01-15 11:21:35] HIT 429 ERROR at Request #1535
+[2026-01-15 11:21:48] HIT 429 ERROR at Request #1537
+[2026-01-15 11:40:07] HIT 429 ERROR at Request #1569
+[2026-01-15 11:58:04] HIT 429 ERROR at Request #1618
+[2026-01-15 12:16:05] HIT 429 ERROR at Request #1667
+[2026-01-15 12:34:18] HIT 429 ERROR at Request #1716
+so@so-virtual-machine:/var/www/bor_terminal/bor_gpt4free$ cat rate_limit_events.log 
