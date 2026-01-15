@@ -338,45 +338,68 @@ def api_stop_test():
     STRESS_TEST_RUNNING = False
     return jsonify({"status": "success", "message": "Stopping test..."})
 
-# --- STANDARD API ---
+# ==================================================================================
+# [FLASK] API ROUTE WITH LOG THROTTLING
+# ==================================================================================
 QUOTA_LOCK = Lock()
 SESSION_COUNTER = 0
 BLOCK_EXPIRATION = 0
 MAX_REQUESTS = 50
 COOLDOWN_SECONDS = 1000
 
+# [NEW] Log Throttler Variable
+LAST_LOG_TIME = 0 
+
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask():
-    global SESSION_COUNTER, BLOCK_EXPIRATION
+    global SESSION_COUNTER, BLOCK_EXPIRATION, LAST_LOG_TIME
 
-    print(f"\n[API] 📥 New Request Received at {time.strftime('%X')}")
+    # Note: We do NOT print "New Request Received" here anymore to reduce spam
 
     with QUOTA_LOCK:
         current_time = time.time()
 
+        # 1. Check if we are currently in a cooldown block
         if BLOCK_EXPIRATION > 0 and current_time < BLOCK_EXPIRATION:
-            print(f"[API] ⛔ Blocked: Cooldown active ({int(BLOCK_EXPIRATION - current_time)}s remaining)")
+            # [FIX] Log Throttling: Only print this message once every 5 seconds
+            if current_time - LAST_LOG_TIME > 5:
+                remaining = int(BLOCK_EXPIRATION - current_time)
+                print(f"[API] ⛔ Blocked: Cooldown active ({remaining}s remaining) - Suppressing further logs...")
+                LAST_LOG_TIME = current_time
+
+            # Return empty response immediately (Status 200 to stop clients from retrying errors)
             return jsonify({}), 200
 
+        # 2. If block has expired, reset counters
         if BLOCK_EXPIRATION > 0 and current_time >= BLOCK_EXPIRATION:
             SESSION_COUNTER = 0
             BLOCK_EXPIRATION = 0
-            print("[SYSTEM] 🟢 Server Block Expired. Counter reset.")
+            print("[SYSTEM] 🟢 Server Block Expired. Counter reset. Accepting traffic.")
 
+        # 3. Increment Request Counter
         SESSION_COUNTER += 1
-        print(f"[API] Request #{SESSION_COUNTER} (Limit: {MAX_REQUESTS})")
 
+        # Only print every 10th request to keep console clean
+        if SESSION_COUNTER % 10 == 0:
+            print(f"[API] Request #{SESSION_COUNTER} (Limit: {MAX_REQUESTS})")
+
+        # 4. Check if we just hit the limit
         if SESSION_COUNTER >= MAX_REQUESTS:
             BLOCK_EXPIRATION = current_time + COOLDOWN_SECONDS
-            print(f"[API] 🚨 MAX_REQUESTS REACHED! Blocking incoming traffic for 16 min.")
+            print(f"[API] 🚨 MAX_REQUESTS REACHED! Blocking incoming traffic for {COOLDOWN_SECONDS}s.")
             return jsonify({}), 200
 
+    # 5. Process the Request (Only if not blocked)
     try:
         data = request.get_json(silent=True) or {}
         prompt = data.get('prompt') or data.get('question')
-        if not prompt: return jsonify({"error": "Missing prompt"}), 400
+
+        if not prompt:
+            return jsonify({"error": "Missing prompt"}), 400
+
         result = bot_manager.query(prompt)
         return jsonify({"status": "success", "answer": result})
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
