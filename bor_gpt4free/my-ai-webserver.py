@@ -369,10 +369,11 @@ def api_ask():
             # Calculate time remaining until the next hour starts
             next_hour = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
             seconds_left = int((next_hour - now).total_seconds())
+            minutes_left = int(seconds_left / 60) + 1
 
             # Log Throttling: Print warning only once every 10 seconds
             if time.time() - LAST_LOG_TIME > 10:
-                print(f"[API] ⛔ HOURLY LIMIT REACHED ({SESSION_COUNTER}/{MAX_HOURLY_REQUESTS}). Dropping requests until next hour ({seconds_left}s remaining).")
+                print(f"[API] ⛔ HOURLY LIMIT REACHED ({SESSION_COUNTER}/{MAX_HOURLY_REQUESTS}). Dropping requests until next hour (~{minutes_left} min remaining).")
                 LAST_LOG_TIME = time.time()
 
             # Drop request (Return 200 OK with empty body to prevent client retries)
