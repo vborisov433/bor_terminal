@@ -343,7 +343,7 @@ def api_stop_test():
 # [FLASK] API ROUTE WITH LOG THROTTLING
 # ==================================================================================
 QUOTA_LOCK = Lock()
-MAX_HOURLY_REQUESTS = 50
+MAX_HOURLY_REQUESTS = 90
 
 # State Tracking
 CURRENT_HOUR_TRACKER = -1  # Keeps track of which hour we are in (0-23)
