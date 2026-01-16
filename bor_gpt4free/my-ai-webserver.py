@@ -354,39 +354,31 @@ LAST_LOG_TIME = 0          # For log throttling
 def api_ask():
     global SESSION_COUNTER, CURRENT_HOUR_TRACKER, LAST_LOG_TIME
 
+    # 1. CHECK QUOTA (Read-Only logic first)
     with QUOTA_LOCK:
         now = datetime.datetime.now()
-        this_hour = now.hour  # e.g., 14 for 2 PM
+        this_hour = now.hour
 
-        # 1. NEW HOUR CHECK: If the clock has struck a new hour, reset everything
+        # New Hour Check: Reset if we moved to a new hour
         if this_hour != CURRENT_HOUR_TRACKER:
             print(f"[SYSTEM] 🕒 New Hour Detected ({this_hour}:00). Resetting Quota.")
             CURRENT_HOUR_TRACKER = this_hour
             SESSION_COUNTER = 0
 
-        # 2. LIMIT CHECK: Have we hit the limit for this specific clock hour?
+        # Limit Check: Stop if we hit the limit
         if SESSION_COUNTER >= MAX_HOURLY_REQUESTS:
-            # Calculate time remaining until the next hour starts
             next_hour = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
             seconds_left = int((next_hour - now).total_seconds())
             minutes_left = int(seconds_left / 60) + 1
 
-            # Log Throttling: Print warning only once every 10 seconds
             if time.time() - LAST_LOG_TIME > 10:
                 print(f"[API] ⛔ HOURLY LIMIT REACHED ({SESSION_COUNTER}/{MAX_HOURLY_REQUESTS}). Dropping requests until next hour (~{minutes_left} min remaining).")
                 LAST_LOG_TIME = time.time()
 
-            # Drop request (Return 200 OK with empty body to prevent client retries)
+            # Return empty success to satisfy client but do no work
             return jsonify({}), 200
 
-        # 3. INCREMENT: Count this valid request
-        SESSION_COUNTER += 1
-
-        # Log progress occasionally
-        if SESSION_COUNTER % 5 == 0:
-            print(f"[API] 📊 Hourly Quota: {SESSION_COUNTER}/{MAX_HOURLY_REQUESTS}")
-
-    # 4. PROCESS: Only if we passed the checks above
+    # 2. PROCESS (Attempt the query outside the lock)
     try:
         data = request.get_json(silent=True) or {}
         prompt = data.get('prompt') or data.get('question')
@@ -394,10 +386,21 @@ def api_ask():
         if not prompt:
             return jsonify({"error": "Missing prompt"}), 400
 
+        # Run the heavy query
         result = bot_manager.query(prompt)
+
+        # 3. INCREMENT ONLY ON SUCCESS
+        # The bot_manager returns strings starting with "Error" if something goes wrong.
+        if result and not result.startswith("Error"):
+            with QUOTA_LOCK:
+                SESSION_COUNTER += 1
+                if SESSION_COUNTER % 5 == 0:
+                    print(f"[API] 📊 Hourly Quota: {SESSION_COUNTER}/{MAX_HOURLY_REQUESTS}")
+
         return jsonify({"status": "success", "answer": result})
 
     except Exception as e:
+        # Do not increment counter on exception
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/', methods=['GET', 'POST'])
