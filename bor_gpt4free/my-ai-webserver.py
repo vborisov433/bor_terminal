@@ -178,7 +178,13 @@ class GeminiManager:
                 raise
 
     async def _execute_with_retry(self, prompt, q_id):
-        # 1. Circuit Breaker Check
+        # Access the global lockout flag
+        global HOURLY_429_LOCKOUT
+
+        # 1. Circuit Breaker / Lockout Check
+        if HOURLY_429_LOCKOUT:
+             return "Error: 429 Lockout Active. Waiting for next hour."
+
         if self.is_rate_limited:
             remaining = self.rate_limit_resume_time - time.time()
             if remaining > 0:
@@ -197,18 +203,11 @@ class GeminiManager:
             try:
                 await self._ensure_client()
 
-                # [LOGIC] 30-Request Rotation Strategy
-                # If chat is missing OR we hit the limit, start fresh.
                 if self.chat is None or self.chat_request_count >= self.MAX_CHAT_TURNS:
-                    reason = "Limit Reached" if self.chat else "New Session"
-                    print(f"[SYSTEM #{q_id}] 🔄 Rotating Chat Session ({reason})...")
                     self.chat = self.client.start_chat()
                     self.chat_request_count = 0
 
-                # Increment counter BEFORE sending (safe in single-threaded event loop)
                 self.chat_request_count += 1
-
-                # Use local reference to avoid race conditions if reset happens during await
                 active_chat = self.chat
 
                 response = await asyncio.wait_for(
@@ -234,23 +233,22 @@ class GeminiManager:
                         print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
                         async with self.async_lock:
                             self.client = None
-                            self.chat = None # Force reset
+                            self.chat = None
                         attempts += 1
                         continue
                     else:
-                        self.is_rate_limited = True
-                        self.rate_limit_resume_time = time.time() + 1200 # 20 min cool down
-                        return "Error: Rate limit reached. Pausing for 20 minutes."
+                        # --- [CHANGE] TRIGGER HOURLY LOCKOUT ---
+                        print(f"[SYSTEM] ⛔ HARD 429 RECEIVED. PAUSING UNTIL NEXT HOUR.")
+                        HOURLY_429_LOCKOUT = True
+                        return "Error: Rate limit reached. Global lockout until next hour."
 
                 # CASE B: Session Invalid
                 elif "auth" in error_str or "login" in error_str or "session" in error_str:
-                    print(f"[WARN #{q_id}] Session Invalid. Resetting...")
                     async with self.async_lock:
                         self.client = None
-                        self.chat = None # Force reset
+                        self.chat = None
                         self.chat_request_count = 0
 
-                # CASE C: Server Error
                 elif "500" in error_str:
                      await asyncio.sleep(10)
 
@@ -293,6 +291,7 @@ bot_manager = GeminiManager()
 
 # --- STRESS TESTING THREAD ---
 STRESS_TEST_RUNNING = False
+HOURLY_429_LOCKOUT = False
 
 def run_stress_test_loop():
     global STRESS_TEST_RUNNING
@@ -352,33 +351,39 @@ LAST_LOG_TIME = 0          # For log throttling
 
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask():
-    global SESSION_COUNTER, CURRENT_HOUR_TRACKER, LAST_LOG_TIME
+    global SESSION_COUNTER, CURRENT_HOUR_TRACKER, LAST_LOG_TIME, HOURLY_429_LOCKOUT
 
-    # 1. CHECK QUOTA (Read-Only logic first)
+    # 1. CHECK QUOTA & LOCKOUT
     with QUOTA_LOCK:
         now = datetime.datetime.now()
         this_hour = now.hour
 
-        # New Hour Check: Reset if we moved to a new hour
+        # [RESET LOGIC] New Hour = Fresh Start
         if this_hour != CURRENT_HOUR_TRACKER:
-            print(f"[SYSTEM] 🕒 New Hour Detected ({this_hour}:00). Resetting Quota.")
+            print(f"[SYSTEM] 🕒 New Hour Detected ({this_hour}:00). Resetting Quotas & Lockouts.")
             CURRENT_HOUR_TRACKER = this_hour
             SESSION_COUNTER = 0
+            HOURLY_429_LOCKOUT = False  # <--- Release the lockout
 
-        # Limit Check: Stop if we hit the limit
-        if SESSION_COUNTER >= MAX_HOURLY_REQUESTS:
+        # [LOCKOUT CHECK] If 429 flag is up, stop everything
+        if HOURLY_429_LOCKOUT:
+            # Calculate wait time for logs
             next_hour = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-            seconds_left = int((next_hour - now).total_seconds())
-            minutes_left = int(seconds_left / 60) + 1
+            minutes_left = int((next_hour - now).total_seconds() / 60) + 1
 
             if time.time() - LAST_LOG_TIME > 10:
-                print(f"[API] ⛔ HOURLY LIMIT REACHED ({SESSION_COUNTER}/{MAX_HOURLY_REQUESTS}). Dropping requests until next hour (~{minutes_left} min remaining).")
+                print(f"[API] ⛔ SYSTEM LOCKED (429 Hit). Paused until next hour (~{minutes_left} min left).")
                 LAST_LOG_TIME = time.time()
-
-            # Return empty success to satisfy client but do no work
             return jsonify({}), 200
 
-    # 2. PROCESS (Attempt the query outside the lock)
+        # [QUOTA CHECK] Standard hourly numeric limit
+        if SESSION_COUNTER >= MAX_HOURLY_REQUESTS:
+            if time.time() - LAST_LOG_TIME > 10:
+                print(f"[API] ⛔ HOURLY QUOTA REACHED ({SESSION_COUNTER}). Dropping requests.")
+                LAST_LOG_TIME = time.time()
+            return jsonify({}), 200
+
+    # 2. PROCESS (Attempt the query)
     try:
         data = request.get_json(silent=True) or {}
         prompt = data.get('prompt') or data.get('question')
@@ -386,11 +391,9 @@ def api_ask():
         if not prompt:
             return jsonify({"error": "Missing prompt"}), 400
 
-        # Run the heavy query
         result = bot_manager.query(prompt)
 
         # 3. INCREMENT ONLY ON SUCCESS
-        # The bot_manager returns strings starting with "Error" if something goes wrong.
         if result and not result.startswith("Error"):
             with QUOTA_LOCK:
                 SESSION_COUNTER += 1
@@ -400,7 +403,6 @@ def api_ask():
         return jsonify({"status": "success", "answer": result})
 
     except Exception as e:
-        # Do not increment counter on exception
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/', methods=['GET', 'POST'])
