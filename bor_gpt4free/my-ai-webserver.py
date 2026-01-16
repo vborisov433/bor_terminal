@@ -294,24 +294,30 @@ STRESS_TEST_RUNNING = False
 HOURLY_429_LOCKOUT = False
 
 def run_stress_test_loop():
-    global STRESS_TEST_RUNNING
+    global STRESS_TEST_RUNNING, HOURLY_429_LOCKOUT
     print("\n[TEST] 🧪 STARTED: Stress Testing for Rate Limits...")
 
     while STRESS_TEST_RUNNING:
-        if bot_manager.is_rate_limited:
-            print("[TEST] 🛑 System reported Rate Limit! Test stopping.")
+        if HOURLY_429_LOCKOUT:
+            print("[TEST] 🛑 System reported Global 429 Lockout! Test stopping.")
             break
 
         prompt = random.choice(TEST_PROMPTS)
-        print(f"[TEST] Sending: '{prompt}'")
-
         result = bot_manager.query(prompt)
 
-        if "Rate limit reached" in result:
-            print("[TEST] 🛑 Received Rate Limit Error from Manager. Stopping.")
+        if "Rate limit reached" in result or "Lockout" in result:
+            print("[TEST] 🛑 Received Rate Limit Error. Stopping.")
             break
 
-        time.sleep(1)
+        if result.startswith("Error"):
+             print(f"[TEST] ⚠️  {result}")
+        else:
+            # --- [CHANGE] Shorten answer to 70 chars for display ---
+            clean_res = result.replace('\n', ' ').replace('\r', '')
+            short_res = (clean_res[:70] + '..') if len(clean_res) > 70 else clean_res
+            print(f"[TEST] ✅ Answer: {short_res}")
+
+        time.sleep(2) # Slight delay between stress requests
 
     STRESS_TEST_RUNNING = False
     print("[TEST] 🏁 ENDED: Stress Test Complete.")
@@ -342,7 +348,7 @@ def api_stop_test():
 # [FLASK] API ROUTE WITH LOG THROTTLING
 # ==================================================================================
 QUOTA_LOCK = Lock()
-MAX_HOURLY_REQUESTS = 90
+MAX_HOURLY_REQUESTS = 80
 
 # State Tracking
 CURRENT_HOUR_TRACKER = -1  # Keeps track of which hour we are in (0-23)
