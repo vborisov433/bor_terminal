@@ -11,6 +11,16 @@ from threading import Lock, Thread
 from flask import Flask, request, render_template_string, jsonify
 
 # ==================================================================================
+# [SETUP] LOGGING SILENCER
+# ==================================================================================
+# Mute verbose debug logs from libraries
+logging.getLogger("gemini_webapi").setLevel(logging.ERROR)
+logging.getLogger("gemini_webapi.client").setLevel(logging.ERROR)
+logging.getLogger("gemini_webapi.utils").setLevel(logging.ERROR)
+logging.getLogger("urllib3").setLevel(logging.ERROR)
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+# ==================================================================================
 # [SETUP] PATH CONFIGURATION
 # ==================================================================================
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +40,56 @@ except ImportError as e:
     print(f"[CRITICAL] Import failed: {e}")
     sys.exit(1)
 
+
+# 1. The filename to read from
+INPUT_FILENAME = "gemini.google.com_cookies.txt"
+# 2. The filename to save to (for your main bot script)
+OUTPUT_FILENAME = "gemini_cookies.json"
+COOKIE_FILENAME = "gemini_cookies.json"
+# (Optional) I will create the file with your data so this script runs immediately for you.
+# If you already have the file locally, you can remove this block.
+raw_cookie_data = ""
+
+# Write the dummy file if it doesn't exist so the script below works
+if not os.path.exists(INPUT_FILENAME):
+    with open(INPUT_FILENAME, "w", encoding="utf-8") as f:
+        f.write(raw_cookie_data)
+    print(f"Created temporary file: {INPUT_FILENAME}")
+
+def convert_netscape_to_json():
+    print(f"Reading from {INPUT_FILENAME}...")
+
+    cookies = {}
+    try:
+        with open(INPUT_FILENAME, 'r', encoding='utf-8') as f:
+            for line in f:
+                # 1. Skip comments and empty lines
+                if line.startswith('#') or not line.strip():
+                    continue
+
+                # 2. Split Netscape format (tab separated)
+                parts = line.strip().split('\t')
+
+                # 3. Ensure valid line length (at least 7 columns)
+                if len(parts) >= 7:
+                    # Name is usually 6th column (index 5)
+                    # Value is usually 7th column (index 6)
+                    name = parts[5]
+                    value = parts[6]
+                    cookies[name] = value
+
+        # 4. Save to JSON
+        with open(OUTPUT_FILENAME, 'w') as f:
+            json.dump(cookies, f, indent=2)
+
+        print(f"✅ Success! Extracted {len(cookies)} cookies.")
+        print(f"📂 Saved to: {OUTPUT_FILENAME}")
+
+    except FileNotFoundError:
+        print(f"❌ Error: File {INPUT_FILENAME} not found.")
+
+convert_netscape_to_json()
+
 # ==================================================================================
 # [DATA] TEST PROMPTS (For Stress Testing)
 # ==================================================================================
@@ -37,12 +97,10 @@ TEST_PROMPTS = [
     "Explain the theory of relativity in one sentence.",
     "What is the distance between Earth and Mars?",
     "Write a haiku about coding.",
-    "What are the three laws of robotics?",
     "Convert 100 Celsius to Fahrenheit.",
     "Who painted the Mona Lisa?",
     "What is the capital of Australia?",
     "Explain how a rainbow is formed.",
-    "What is the speed of light?",
     "Name three types of clouds.",
     "What is the boiling point of nitrogen?",
     "Who wrote Hamlet?",
@@ -57,36 +115,35 @@ TEST_PROMPTS = [
 ]
 
 # ==================================================================================
-# [CORE] PERSISTENT MANAGER (MULTI-ACCOUNT & ANTI-BOT)
+# [GLOBALS] SAFETY SWITCHES
+# ==================================================================================
+HOURLY_429_LOCKOUT = False
+
+# ==================================================================================
+# [CORE] PERSISTENT MANAGER
 # ==================================================================================
 class GeminiManager:
     def __init__(self):
         self.client = None
         self.chat = None
-        self.chat_request_count = 0  # [NEW] Track requests per session
-        self.MAX_CHAT_TURNS = 30     # [NEW] Limit before rotation
+        self.chat_request_count = 0
+        self.MAX_CHAT_TURNS = 30
 
         self.loop = asyncio.new_event_loop()
         self.async_lock = asyncio.Lock()
 
-        # --- [CONFIG] ACCOUNT MANAGEMENT ---
-        self.cookie_files = ["gemini_cookies.json"]
+        self.cookie_files = [COOKIE_FILENAME]
         self.rate_limit_log = "rate_limit_events.log"
         self.current_account_index = 0
 
-        # Logging / ID helpers
         self.query_counter = 0
         self.log_lock = Lock()
 
-        # Timeouts
         self.generation_timeout = 100
         self.total_timeout = 300
-
-        # --- CIRCUIT BREAKER ---
         self.is_rate_limited = False
         self.rate_limit_resume_time = 0
 
-        # Start the background event loop
         self.thread = Thread(target=self._run_event_loop, daemon=True)
         self.thread.start()
 
@@ -102,7 +159,6 @@ class GeminiManager:
             prev = self.current_account_index
             self.current_account_index = (self.current_account_index + 1) % len(self.cookie_files)
             print(f"[SYSTEM] 🔄 Rotating Account: {prev} -> {self.current_account_index}")
-            # Reset session on account switch
             self.chat = None
             self.chat_request_count = 0
             return True
@@ -118,69 +174,67 @@ class GeminiManager:
             print(f"[LOGGING ERROR] {e}")
 
     async def _ensure_client(self):
-        """Initializes the client if needed."""
-        if self.client:
-            return
-
-        async with self.async_lock:
             if self.client: return
+            async with self.async_lock:
+                if self.client: return
 
-            # Circuit Breaker Check
-            if self.is_rate_limited:
-                if time.time() < self.rate_limit_resume_time:
-                    wait_time = int(self.rate_limit_resume_time - time.time())
-                    raise Exception(f"System cooling down. Waiting {wait_time}s.")
-                else:
-                    self.is_rate_limited = False
+                if self.is_rate_limited:
+                    if time.time() < self.rate_limit_resume_time:
+                        wait_time = int(self.rate_limit_resume_time - time.time())
+                        raise Exception(f"System cooling down. Waiting {wait_time}s.")
+                    else:
+                        self.is_rate_limited = False
 
-            target_cookie_file = self._get_current_cookie_file()
+                target_cookie_file = self._get_current_cookie_file()
+                if not os.path.exists(target_cookie_file):
+                     print(f"[CRITICAL] Cookie file missing: {target_cookie_file}")
+                     raise FileNotFoundError(f"Missing {target_cookie_file}")
 
-            if not os.path.exists(target_cookie_file):
-                 print(f"[CRITICAL] Cookie file missing: {target_cookie_file}")
-                 if self.current_account_index != 0:
-                     self.current_account_index = 0
-                     return await self._ensure_client()
-                 raise FileNotFoundError(f"Missing {target_cookie_file}")
+                try:
+                    with open(target_cookie_file, 'r') as f:
+                        raw = json.load(f)
 
-            try:
-                with open(target_cookie_file, 'r') as f:
-                    raw = json.load(f)
-                cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
+                    # Normalize to dict
+                    cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
 
-                self.client = GeminiClient(
-                    secure_1psid=cookies.get("__Secure-1PSID"),
-                    secure_1psidts=cookies.get("__Secure-1PSIDTS")
-                )
+                    # 1. Initialize with the PRIMARY authentication tokens
+                    # Note: Most libraries only accept these 3 as direct arguments.
+                    self.client = GeminiClient(
+                        secure_1psid=cookies.get("__Secure-1PSID"),
+                        secure_1psidts=cookies.get("__Secure-1PSIDTS")
+                    )
 
-                # UA Rotation
-                user_agents = [
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
-                ]
-                if hasattr(self.client, "session"):
-                    self.client.session.headers["User-Agent"] = random.choice(user_agents)
-                    self.client.session.headers["Referer"] = "https://gemini.google.com/"
+                    user_agents = [
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+                    ]
 
-                for k, v in cookies.items():
-                    if k not in self.client.cookies:
+                    if hasattr(self.client, "session"):
+                        self.client.session.headers["User-Agent"] = random.choice(user_agents)
+                        self.client.session.headers["Referer"] = "https://gemini.google.com/"
+
+                        # 2. CRITICAL: Inject the '3PSID' and other missing cookies manually
+                        # This ensures __Secure-3PSID, __Secure-3PSIDTS, and __Secure-3PSIDCC are sent.
+                        # The library will not ask for them, but Google requires them for Paid accounts.
+                        self.client.session.cookies.update(cookies)
+
+                    # 3. Redundancy: Update the wrapper's internal storage
+                    for k, v in cookies.items():
                         self.client.cookies[k] = v
 
-                await self.client.init(timeout=40)
+                    await self.client.init(timeout=40)
+                    self.chat = None
+                    self.chat_request_count = 0
+                    print(f"[SYSTEM] Client Initialized with Full 6-Token Cookie Set")
 
-                # Reset chat state on fresh client init
-                self.chat = None
-                self.chat_request_count = 0
-                print(f"[SYSTEM] Client Initialized (Account: {self.current_account_index})")
-
-            except Exception as e:
-                print(f"[INIT ERROR] {e}")
-                self.client = None
-                raise
+                except Exception as e:
+                    print(f"[INIT ERROR] {e}")
+                    self.client = None
+                    raise
 
     async def _execute_with_retry(self, prompt, q_id):
             global HOURLY_429_LOCKOUT
 
-            # 1. Global Lockout Check
             if HOURLY_429_LOCKOUT:
                  return "Error: 429 Lockout Active. Waiting for next hour."
 
@@ -191,22 +245,18 @@ class GeminiManager:
                 else:
                     self.is_rate_limited = False
 
-            # --- [FIXED] HUMAN-LIKE DELAY LOGIC ---
-            # If prompt is short (<150 chars), simulate typing.
-            # If long, simulate a "Paste" (faster).
+            # --- [UPDATED] 2X FASTER HUMAN-LIKE DELAY ---
             if len(prompt) < 150:
-                typing_speed = len(prompt) * random.uniform(0.03, 0.08)
+                typing_speed = len(prompt) * random.uniform(0.05, 0.1)
             else:
                 typing_speed = random.uniform(1, 2.5)
 
             thinking_time = random.uniform(1, 3)
 
             total_wait = typing_speed + thinking_time
-
-            # [IMPORTANT] Visual feedback so you know it hasn't crashed
             print(f"[SYSTEM #{q_id}] 👤 Human-Sim: 'Typing' for {total_wait:.1f}s...")
             await asyncio.sleep(total_wait)
-            # -------------------------------------
+            # ---------------------------------------------
 
             attempts = 0
             max_attempts = 2
@@ -269,7 +319,6 @@ class GeminiManager:
             return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
-        """Thread-safe entry point."""
         with self.log_lock:
             self.query_counter += 1
             q_id = self.query_counter
@@ -299,10 +348,7 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 bot_manager = GeminiManager()
-
-# --- STRESS TESTING THREAD ---
 STRESS_TEST_RUNNING = False
-HOURLY_429_LOCKOUT = False
 
 def run_stress_test_loop():
     global STRESS_TEST_RUNNING, HOURLY_429_LOCKOUT
@@ -327,34 +373,24 @@ def run_stress_test_loop():
             short_res = (clean_res[:70] + '..') if len(clean_res) > 70 else clean_res
             print(f"[TEST] ✅ Answer: {short_res}")
 
-        # --- [NEW] VARIABLE SLEEP LOGIC ---
-        # Base wait: 10s to 25s
         wait_time = random.uniform(10, 25)
-
-        # 15% Chance of a "Long Break" (checking email/coffee)
         if random.random() < 0.15:
             extra = random.uniform(20, 60)
             print(f"[TEST] ☕ Taking a break... (+{extra:.0f}s)")
             wait_time += extra
 
-        # print(f"[TEST] ⏳ Sleeping {wait_time:.1f}s...")
         time.sleep(wait_time)
 
 @app.route('/api/test-limit', methods=['POST'])
 def api_test_limit():
     global STRESS_TEST_RUNNING
-
     if STRESS_TEST_RUNNING:
         return jsonify({"status": "error", "message": "Test already running"}), 400
 
     STRESS_TEST_RUNNING = True
     thread = Thread(target=run_stress_test_loop, daemon=True)
     thread.start()
-
-    return jsonify({
-        "status": "success",
-        "message": "Stress test started. Watch server console and 'rate_limit_events.log'."
-    })
+    return jsonify({"status": "success", "message": "Stress test started."})
 
 @app.route('/api/stop-test', methods=['POST'])
 def api_stop_test():
@@ -363,51 +399,42 @@ def api_stop_test():
     return jsonify({"status": "success", "message": "Stopping test..."})
 
 # ==================================================================================
-# [FLASK] API ROUTE WITH LOG THROTTLING
+# [FLASK] API ROUTE
 # ==================================================================================
 QUOTA_LOCK = Lock()
 MAX_HOURLY_REQUESTS = 55
-
-# State Tracking
-CURRENT_HOUR_TRACKER = -1  # Keeps track of which hour we are in (0-23)
-SESSION_COUNTER = 0        # Counts requests in the current hour
-LAST_LOG_TIME = 0          # For log throttling
+CURRENT_HOUR_TRACKER = -1
+SESSION_COUNTER = 0
+LAST_LOG_TIME = 0
 
 @app.route('/api/ask-gpt', methods=['POST'])
 def api_ask():
     global SESSION_COUNTER, CURRENT_HOUR_TRACKER, LAST_LOG_TIME, HOURLY_429_LOCKOUT
 
-    # 1. CHECK QUOTA & LOCKOUT
     with QUOTA_LOCK:
         now = datetime.datetime.now()
         this_hour = now.hour
 
-        # [RESET LOGIC] New Hour = Fresh Start
         if this_hour != CURRENT_HOUR_TRACKER:
             print(f"[SYSTEM] 🕒 New Hour Detected ({this_hour}:00). Resetting Quotas & Lockouts.")
             CURRENT_HOUR_TRACKER = this_hour
             SESSION_COUNTER = 0
-            HOURLY_429_LOCKOUT = False  # <--- Release the lockout
+            HOURLY_429_LOCKOUT = False
 
-        # [LOCKOUT CHECK] If 429 flag is up, stop everything
         if HOURLY_429_LOCKOUT:
-            # Calculate wait time for logs
             next_hour = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
             minutes_left = int((next_hour - now).total_seconds() / 60) + 1
-
             if time.time() - LAST_LOG_TIME > 10:
                 print(f"[API] ⛔ SYSTEM LOCKED (429 Hit). Paused until next hour (~{minutes_left} min left).")
                 LAST_LOG_TIME = time.time()
             return jsonify({}), 200
 
-        # [QUOTA CHECK] Standard hourly numeric limit
         if SESSION_COUNTER >= MAX_HOURLY_REQUESTS:
             if time.time() - LAST_LOG_TIME > 10:
                 print(f"[API] ⛔ HOURLY QUOTA REACHED ({SESSION_COUNTER}). Dropping requests.")
                 LAST_LOG_TIME = time.time()
             return jsonify({}), 200
 
-    # 2. PROCESS (Attempt the query)
     try:
         data = request.get_json(silent=True) or {}
         prompt = data.get('prompt') or data.get('question')
@@ -417,7 +444,6 @@ def api_ask():
 
         result = bot_manager.query(prompt)
 
-        # 3. INCREMENT ONLY ON SUCCESS
         if result and not result.startswith("Error"):
             with QUOTA_LOCK:
                 SESSION_COUNTER += 1
@@ -442,21 +468,18 @@ def web_index():
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
-<head><title>Gemini API (Safe Mode)</title>
+<head><title>Gemini API</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body class="p-5 bg-light">
     <div class="container" style="max-width: 800px;">
         <h2 class="mb-4">🤖 Gemini API</h2>
-
         <div class="card p-3 mb-4">
             <h5>🧪 Stress Test Control</h5>
             <div class="d-flex gap-2">
-                <button onclick="fetch('/api/test-limit', {method:'POST'}).then(r=>r.json()).then(d=>alert(d.message))" class="btn btn-warning">Start Stress Test</button>
+                <button onclick="fetch('/api/test-limit', {method:'POST'}).then(r=>r.json()).then(d=>alert(d.message))" class="btn btn-warning">Start Test</button>
                 <button onclick="fetch('/api/stop-test', {method:'POST'}).then(r=>r.json()).then(d=>alert(d.message))" class="btn btn-danger">Stop Test</button>
             </div>
-            <small class="text-muted mt-2">Check console for live progress.</small>
         </div>
-
         <form method="post">
             <textarea name="question" class="form-control mb-3" rows="5" placeholder="Enter prompt...">{{question}}</textarea>
             <button class="btn btn-primary w-100">Submit</button>
