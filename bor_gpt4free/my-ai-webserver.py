@@ -178,84 +178,94 @@ class GeminiManager:
                 raise
 
     async def _execute_with_retry(self, prompt, q_id):
-        # Access the global lockout flag
-        global HOURLY_429_LOCKOUT
+            global HOURLY_429_LOCKOUT
 
-        # 1. Circuit Breaker / Lockout Check
-        if HOURLY_429_LOCKOUT:
-             return "Error: 429 Lockout Active. Waiting for next hour."
+            # 1. Global Lockout Check
+            if HOURLY_429_LOCKOUT:
+                 return "Error: 429 Lockout Active. Waiting for next hour."
 
-        if self.is_rate_limited:
-            remaining = self.rate_limit_resume_time - time.time()
-            if remaining > 0:
-                return f"Error: System cooling down ({int(remaining)}s remaining)."
-            else:
-                self.is_rate_limited = False
+            if self.is_rate_limited:
+                remaining = self.rate_limit_resume_time - time.time()
+                if remaining > 0:
+                    return f"Error: System cooling down ({int(remaining)}s remaining)."
+                else:
+                    self.is_rate_limited = False
 
-        # 2. Jitter
-        jitter = random.uniform(4, 8)
-        await asyncio.sleep(jitter)
+            # --- [NEW] HUMAN-LIKE DELAY LOGIC ---
+            # 1. Simulate Typing: 0.1s to 0.25s per character
+            typing_speed = len(prompt) * random.uniform(0.1, 0.25)
 
-        attempts = 0
-        max_attempts = 2
+            # 2. Simulate Thinking: Base 3s to 10s
+            thinking_time = random.uniform(3, 10)
 
-        while attempts < max_attempts:
-            try:
-                await self._ensure_client()
+            # 3. Simulate "Distraction" (10% chance of extra 10-20s pause)
+            if random.random() < 0.1:
+                thinking_time += random.uniform(10, 20)
 
-                if self.chat is None or self.chat_request_count >= self.MAX_CHAT_TURNS:
-                    self.chat = self.client.start_chat()
-                    self.chat_request_count = 0
+            total_wait = typing_speed + thinking_time
+            # print(f"[SYSTEM #{q_id}] ⏳ Human-like wait: {total_wait:.1f}s")
+            await asyncio.sleep(total_wait)
+            # -------------------------------------
 
-                self.chat_request_count += 1
-                active_chat = self.chat
+            attempts = 0
+            max_attempts = 2
 
-                response = await asyncio.wait_for(
-                    active_chat.send_message(prompt),
-                    timeout=self.generation_timeout
-                )
-                return response.text
+            while attempts < max_attempts:
+                try:
+                    await self._ensure_client()
 
-            except asyncio.TimeoutError:
-                print(f"[WARN #{q_id}] Timeout")
-                attempts += 1
+                    if self.chat is None or self.chat_request_count >= self.MAX_CHAT_TURNS:
+                        reason = "Limit Reached" if self.chat else "New Session"
+                        self.chat = self.client.start_chat()
+                        self.chat_request_count = 0
 
-            except Exception as e:
-                error_str = str(e).lower()
-                print(f"[ERROR #{q_id}] {e}")
+                    self.chat_request_count += 1
+                    active_chat = self.chat
 
-                # CASE A: Rate Limit (429)
-                if "429" in error_str or "too many requests" in error_str:
-                    print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
-                    self._log_rate_limit(q_id)
+                    response = await asyncio.wait_for(
+                        active_chat.send_message(prompt),
+                        timeout=self.generation_timeout
+                    )
+                    return response.text
 
-                    if self._rotate_account():
-                        print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
+                except asyncio.TimeoutError:
+                    print(f"[WARN #{q_id}] Timeout")
+                    attempts += 1
+
+                except Exception as e:
+                    error_str = str(e).lower()
+                    print(f"[ERROR #{q_id}] {e}")
+
+                    if "429" in error_str or "too many requests" in error_str:
+                        print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
+                        self._log_rate_limit(q_id)
+
+                        if self._rotate_account():
+                            print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
+                            async with self.async_lock:
+                                self.client = None
+                                self.chat = None
+                            attempts += 1
+                            continue
+                        else:
+                            print(f"[SYSTEM] ⛔ HARD 429 RECEIVED. PAUSING UNTIL NEXT HOUR.")
+                            HOURLY_429_LOCKOUT = True
+                            self.is_rate_limited = True
+                            return "Error: Rate limit reached. Global lockout until next hour."
+
+                    elif "auth" in error_str or "login" in error_str or "session" in error_str:
                         async with self.async_lock:
                             self.client = None
                             self.chat = None
-                        attempts += 1
-                        continue
-                    else:
-                        # --- [CHANGE] TRIGGER HOURLY LOCKOUT ---
-                        print(f"[SYSTEM] ⛔ HARD 429 RECEIVED. PAUSING UNTIL NEXT HOUR.")
-                        HOURLY_429_LOCKOUT = True
-                        return "Error: Rate limit reached. Global lockout until next hour."
+                            self.chat_request_count = 0
 
-                # CASE B: Session Invalid
-                elif "auth" in error_str or "login" in error_str or "session" in error_str:
-                    async with self.async_lock:
-                        self.client = None
-                        self.chat = None
-                        self.chat_request_count = 0
+                    elif "500" in error_str:
+                         await asyncio.sleep(10)
 
-                elif "500" in error_str:
-                     await asyncio.sleep(10)
+                    attempts += 1
+                    await asyncio.sleep(5)
 
-                attempts += 1
-                await asyncio.sleep(5)
-
-        return "Error: Failed to generate response after retries."
+            return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
         """Thread-safe entry point."""
@@ -295,7 +305,7 @@ HOURLY_429_LOCKOUT = False
 
 def run_stress_test_loop():
     global STRESS_TEST_RUNNING, HOURLY_429_LOCKOUT
-    print("\n[TEST] 🧪 STARTED: Stress Testing for Rate Limits...")
+    print("\n[TEST] 🧪 STARTED: Stress Testing with HUMAN-LIKE Timing...")
 
     while STRESS_TEST_RUNNING:
         if HOURLY_429_LOCKOUT:
@@ -312,15 +322,22 @@ def run_stress_test_loop():
         if result.startswith("Error"):
              print(f"[TEST] ⚠️  {result}")
         else:
-            # --- [CHANGE] Shorten answer to 70 chars for display ---
             clean_res = result.replace('\n', ' ').replace('\r', '')
             short_res = (clean_res[:70] + '..') if len(clean_res) > 70 else clean_res
             print(f"[TEST] ✅ Answer: {short_res}")
 
-        time.sleep(2) # Slight delay between stress requests
+        # --- [NEW] VARIABLE SLEEP LOGIC ---
+        # Base wait: 10s to 25s
+        wait_time = random.uniform(10, 25)
 
-    STRESS_TEST_RUNNING = False
-    print("[TEST] 🏁 ENDED: Stress Test Complete.")
+        # 15% Chance of a "Long Break" (checking email/coffee)
+        if random.random() < 0.15:
+            extra = random.uniform(20, 60)
+            print(f"[TEST] ☕ Taking a break... (+{extra:.0f}s)")
+            wait_time += extra
+
+        # print(f"[TEST] ⏳ Sleeping {wait_time:.1f}s...")
+        time.sleep(wait_time)
 
 @app.route('/api/test-limit', methods=['POST'])
 def api_test_limit():
