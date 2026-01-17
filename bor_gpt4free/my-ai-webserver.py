@@ -191,19 +191,20 @@ class GeminiManager:
                 else:
                     self.is_rate_limited = False
 
-            # --- [NEW] HUMAN-LIKE DELAY LOGIC ---
-            # 1. Simulate Typing: 0.1s to 0.25s per character
-            typing_speed = len(prompt) * random.uniform(0.1, 0.25)
+            # --- [FIXED] HUMAN-LIKE DELAY LOGIC ---
+            # If prompt is short (<150 chars), simulate typing.
+            # If long, simulate a "Paste" (faster).
+            if len(prompt) < 150:
+                typing_speed = len(prompt) * random.uniform(0.1, 0.2)
+            else:
+                typing_speed = random.uniform(2, 5) # Simulate pasting + reviewing
 
-            # 2. Simulate Thinking: Base 3s to 10s
-            thinking_time = random.uniform(3, 10)
-
-            # 3. Simulate "Distraction" (10% chance of extra 10-20s pause)
-            if random.random() < 0.1:
-                thinking_time += random.uniform(10, 20)
+            thinking_time = random.uniform(2, 6)
 
             total_wait = typing_speed + thinking_time
-            # print(f"[SYSTEM #{q_id}] ⏳ Human-like wait: {total_wait:.1f}s")
+
+            # [IMPORTANT] Visual feedback so you know it hasn't crashed
+            print(f"[SYSTEM #{q_id}] 👤 Human-Sim: 'Typing' for {total_wait:.1f}s...")
             await asyncio.sleep(total_wait)
             # -------------------------------------
 
