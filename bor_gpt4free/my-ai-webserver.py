@@ -225,7 +225,7 @@ class GeminiManager:
             global HOURLY_429_LOCKOUT
 
             if HOURLY_429_LOCKOUT:
-                    return "Error: System Locked (429/503/RepeatedFailure). Waiting for next hour."
+                return "Error: System Locked (429/503/RepeatedFailure). Waiting for next hour."
 
             if self.is_rate_limited:
                 remaining = self.rate_limit_resume_time - time.time()
@@ -293,6 +293,11 @@ class GeminiManager:
                     # [CASE 2] Session Rot (406, Invalid Response)
                     elif any(x in error_str for x in ["406", "invalid response"]):
                         print(f"\n{'='*20} [DEBUG] 406/INVALID RESPONSE - SKIPPING {'='*20}")
+
+                        # [DEBUG] Print the failed prompt to console
+                        print(f"FAILED PROMPT (REQ #{q_id}):\n{prompt}")
+                        print(f"{'='*60}\n")
+
                         try:
                             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                             with open(self.invalid_response_log, "a", encoding="utf-8") as f:
@@ -314,6 +319,8 @@ class GeminiManager:
                         # 1. Print and Log
                         print(f"\n{'='*20} [DEBUG] FAILED TO GENERATE CONTENTS ({self.content_failure_count}/3) {'='*20}")
                         print(f"FAILED PROMPT:\n{prompt}")
+                        print(f"{'='*60}\n")
+
                         try:
                             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                             log_entry = (
