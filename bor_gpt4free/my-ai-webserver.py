@@ -134,6 +134,8 @@ class GeminiManager:
 
         self.cookie_files = [COOKIE_FILENAME]
         self.rate_limit_log = "rate_limit_events.log"
+        self.invalid_response_log = "invalid_responses.log"
+        self.debug_log = "general_debug.log"
         self.current_account_index = 0
 
         self.query_counter = 0
@@ -233,94 +235,120 @@ class GeminiManager:
                     raise
 
     async def _execute_with_retry(self, prompt, q_id):
-                global HOURLY_429_LOCKOUT
+            global HOURLY_429_LOCKOUT
 
-                if HOURLY_429_LOCKOUT:
-                     return "Error: 429 Lockout Active. Waiting for next hour."
+            if HOURLY_429_LOCKOUT:
+                    return "Error: 429 Lockout Active. Waiting for next hour."
 
-                if self.is_rate_limited:
-                    remaining = self.rate_limit_resume_time - time.time()
-                    if remaining > 0:
-                        return f"Error: System cooling down ({int(remaining)}s remaining)."
-                    else:
-                        self.is_rate_limited = False
-
-                # --- HUMAN-LIKE DELAY ---
-                if len(prompt) < 150:
-                    typing_speed = len(prompt) * random.uniform(0.05, 0.1)
+            if self.is_rate_limited:
+                remaining = self.rate_limit_resume_time - time.time()
+                if remaining > 0:
+                    return f"Error: System cooling down ({int(remaining)}s remaining)."
                 else:
-                    typing_speed = random.uniform(1, 2.5)
-                thinking_time = random.uniform(1, 3)
-                await asyncio.sleep(typing_speed + thinking_time)
-                # ------------------------
+                    self.is_rate_limited = False
 
-                attempts = 0
-                max_attempts = 3
+            # --- HUMAN-LIKE DELAY ---
+            if len(prompt) < 150:
+                typing_speed = len(prompt) * random.uniform(0.05, 0.1)
+            else:
+                typing_speed = random.uniform(1, 2.5)
+            thinking_time = random.uniform(1, 3)
+            await asyncio.sleep(typing_speed + thinking_time)
+            # ------------------------
 
-                while attempts < max_attempts:
-                    try:
-                        await self._ensure_client()
+            attempts = 0
+            max_attempts = 3
 
-                        if self.chat is None or self.chat_request_count >= self.MAX_CHAT_TURNS:
-                            self.chat = self.client.start_chat()
-                            self.chat_request_count = 0
+            while attempts < max_attempts:
+                try:
+                    await self._ensure_client()
 
-                        self.chat_request_count += 1
-                        active_chat = self.chat
+                    if self.chat is None or self.chat_request_count >= self.MAX_CHAT_TURNS:
+                        self.chat = self.client.start_chat()
+                        self.chat_request_count = 0
 
-                        response = await asyncio.wait_for(
-                            active_chat.send_message(prompt),
-                            timeout=self.generation_timeout
-                        )
-                        return response.text
+                    self.chat_request_count += 1
+                    active_chat = self.chat
 
-                    except asyncio.TimeoutError:
-                        print(f"[WARN #{q_id}] Timeout")
-                        attempts += 1
+                    response = await asyncio.wait_for(
+                        active_chat.send_message(prompt),
+                        timeout=self.generation_timeout
+                    )
+                    return response.text
 
-                    except Exception as e:
-                        error_str = str(e).lower()
-                        print(f"[ERROR #{q_id}] {e}")
+                except asyncio.TimeoutError:
+                    print(f"[WARN #{q_id}] Timeout")
+                    attempts += 1
 
-                        # [CASE 1] Rate Limit (429)
-                        if "429" in error_str or "too many requests" in error_str:
-                            print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
-                            self._log_rate_limit(q_id)
-                            if self._rotate_account():
-                                print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
-                                async with self.async_lock:
-                                    self.client = None
-                                    self.chat = None
-                                attempts += 1
-                                continue
-                            else:
-                                HOURLY_429_LOCKOUT = True
-                                self.is_rate_limited = True
-                                return "Error: Rate limit reached. Global lockout."
+                except Exception as e:
+                    error_str = str(e).lower()
+                    print(f"[ERROR #{q_id}] {e}")
 
-                        # [CASE 2] Session Rot (406, Invalid Response)
-                        # ACTION: Print Debug -> SKIP REQUEST (Do not retry)
-                        elif any(x in error_str for x in ["406", "invalid response"]):
-                            print(f"\n{'='*20} [DEBUG] 406/INVALID RESPONSE - SKIPPING {'='*20}")
-                            print(f"FAILED PROMPT:\n{prompt}")
-                            print(f"{'='*60}\n")
-                            return "Error: Skipped due to 406/Invalid Response."
-
-                        # [CASE 3] Auth/Login issues
-                        elif any(x in error_str for x in ["auth", "login", "session"]):
+                    # [CASE 1] Rate Limit (429)
+                    if "429" in error_str or "too many requests" in error_str:
+                        print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
+                        self._log_rate_limit(q_id)
+                        if self._rotate_account():
+                            print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
                             async with self.async_lock:
                                 self.client = None
                                 self.chat = None
-                                self.chat_request_count = 0
+                            attempts += 1
+                            continue
+                        else:
+                            HOURLY_429_LOCKOUT = True
+                            self.is_rate_limited = True
+                            return "Error: Rate limit reached. Global lockout."
 
-                        # [CASE 4] Server Errors (500)
-                        elif "500" in error_str:
-                             await asyncio.sleep(5)
+                    # [CASE 2] Session Rot (406, Invalid Response)
+                    elif any(x in error_str for x in ["406", "invalid response"]):
+                        print(f"\n{'='*20} [DEBUG] 406/INVALID RESPONSE - SKIPPING {'='*20}")
+                        try:
+                            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+                            with open(self.invalid_response_log, "a", encoding="utf-8") as f:
+                                f.write(f"[{timestamp}] Req #{q_id} FAILED: {str(e)}\nPrompt: {prompt}\n{'-'*40}\n")
+                        except: pass
+                        return "Error: Skipped due to 406/Invalid Response."
 
-                        attempts += 1
-                        await asyncio.sleep(3)
+                    # [CASE 3] Auth/Login issues
+                    elif any(x in error_str for x in ["auth", "login", "session"]):
+                        async with self.async_lock:
+                            self.client = None
+                            self.chat = None
+                            self.chat_request_count = 0
 
-                return "Error: Failed to generate response after retries."
+                    # [CASE 5] Server Unavailable (503) -- NEW ADDITION
+                    elif "503" in error_str:
+                        # 1. Print Debug details to Console
+                        print(f"\n{'='*20} [DEBUG] 503 SERVICE UNAVAILABLE - SKIPPING {'='*20}")
+                        print(f"FAILED PROMPT (REQ #{q_id}):\n{prompt}")
+                        print(f"{'='*60}\n")
+
+                        # 2. Log to General Debug File
+                        try:
+                            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+                            log_entry = (
+                                f"[{timestamp}] Request #{q_id} FAILED (503)\n"
+                                f"Error: {str(e)}\n"
+                                f"Prompt: {prompt}\n"
+                                f"{'-'*40}\n"
+                            )
+                            with open(self.debug_log, "a", encoding="utf-8") as f:
+                                f.write(log_entry)
+                        except Exception as log_err:
+                            print(f"[LOG ERROR] Could not write to debug file: {log_err}")
+
+                        # 3. Skip immediately (Return Error, do not retry)
+                        return "Error: Skipped due to 503 Service Unavailable."
+
+                    # [CASE 4] Server Errors (500) - Retryable
+                    elif "500" in error_str:
+                            await asyncio.sleep(5)
+
+                    attempts += 1
+                    await asyncio.sleep(3)
+
+            return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
         with self.log_lock:

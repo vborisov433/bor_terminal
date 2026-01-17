@@ -33,14 +33,17 @@ class AnalyzeGptCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $repo = $this->em->getRepository(NewsItem::class);
-        // Only process unanalyzed items
-//        $newsItems = $repo->findBy(['analyzed' => false]);
 
-        $newsItems = $repo->findBy(
-            ['analyzed' => false],
-            ['id' => 'DESC'],
-            100, // Limit to 100 items
-        );
+        $ago = new \DateTimeImmutable('-30 days');
+        $newsItems = $repo->createQueryBuilder('n')
+            ->where('n.analyzed = :analyzed')
+            ->andWhere('n.date >= :startDate') // Using the 'date' field from your Entity
+            ->setParameter('analyzed', false)
+            ->setParameter('startDate', $ago)
+            ->orderBy('n.id', 'DESC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult();
 
         $total = count($newsItems);
         if ($total === 0) {
