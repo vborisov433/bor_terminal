@@ -298,22 +298,22 @@ class GeminiManager:
                                 self.is_rate_limited = True
                                 return "Error: Rate limit reached. Global lockout."
 
-                        # [CASE 2] Session Rot (406, Invalid Response, Auth)
-                        elif any(x in error_str for x in ["406", "invalid response", "auth", "login", "session"]):
-                            print(f"[SYSTEM #{q_id}] ⚠️ Session Desync/406 Detected. Re-initializing...")
-
-                            # [DEBUG] PRINT THE PROMPT HERE
-                            print(f"\n{'='*20} DEBUG: FAILED PROMPT {'='*20}")
-                            print(f"{prompt}")
+                        # [CASE 2] Session Rot (406, Invalid Response)
+                        # ACTION: Print Debug -> SKIP REQUEST (Do not retry)
+                        elif any(x in error_str for x in ["406", "invalid response"]):
+                            print(f"\n{'='*20} [DEBUG] 406/INVALID RESPONSE - SKIPPING {'='*20}")
+                            print(f"FAILED PROMPT:\n{prompt}")
                             print(f"{'='*60}\n")
+                            return "Error: Skipped due to 406/Invalid Response."
 
+                        # [CASE 3] Auth/Login issues
+                        elif any(x in error_str for x in ["auth", "login", "session"]):
                             async with self.async_lock:
                                 self.client = None
                                 self.chat = None
                                 self.chat_request_count = 0
-                            await asyncio.sleep(2)
 
-                        # [CASE 3] Server Errors (500)
+                        # [CASE 4] Server Errors (500)
                         elif "500" in error_str:
                              await asyncio.sleep(5)
 
