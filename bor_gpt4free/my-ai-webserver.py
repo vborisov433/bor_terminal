@@ -233,90 +233,91 @@ class GeminiManager:
                     raise
 
     async def _execute_with_retry(self, prompt, q_id):
-            global HOURLY_429_LOCKOUT
+                global HOURLY_429_LOCKOUT
 
-            if HOURLY_429_LOCKOUT:
-                 return "Error: 429 Lockout Active. Waiting for next hour."
+                if HOURLY_429_LOCKOUT:
+                     return "Error: 429 Lockout Active. Waiting for next hour."
 
-            if self.is_rate_limited:
-                remaining = self.rate_limit_resume_time - time.time()
-                if remaining > 0:
-                    return f"Error: System cooling down ({int(remaining)}s remaining)."
+                if self.is_rate_limited:
+                    remaining = self.rate_limit_resume_time - time.time()
+                    if remaining > 0:
+                        return f"Error: System cooling down ({int(remaining)}s remaining)."
+                    else:
+                        self.is_rate_limited = False
+
+                # --- HUMAN-LIKE DELAY ---
+                if len(prompt) < 150:
+                    typing_speed = len(prompt) * random.uniform(0.05, 0.1)
                 else:
-                    self.is_rate_limited = False
+                    typing_speed = random.uniform(1, 2.5)
+                thinking_time = random.uniform(1, 3)
+                await asyncio.sleep(typing_speed + thinking_time)
+                # ------------------------
 
-            # --- [UPDATED] 2X FASTER HUMAN-LIKE DELAY ---
-            if len(prompt) < 150:
-                typing_speed = len(prompt) * random.uniform(0.05, 0.1)
-            else:
-                typing_speed = random.uniform(1, 2.5)
+                attempts = 0
+                max_attempts = 3  # Increased to 3 to allow for a 406 recovery
 
-            thinking_time = random.uniform(1, 3)
+                while attempts < max_attempts:
+                    try:
+                        await self._ensure_client()
 
-            total_wait = typing_speed + thinking_time
-            print(f"[SYSTEM #{q_id}] 👤 Human-Sim: 'Typing' for {total_wait:.1f}s...")
-            await asyncio.sleep(total_wait)
-            # ---------------------------------------------
-
-            attempts = 0
-            max_attempts = 2
-
-            while attempts < max_attempts:
-                try:
-                    await self._ensure_client()
-
-                    if self.chat is None or self.chat_request_count >= self.MAX_CHAT_TURNS:
-                        reason = "Limit Reached" if self.chat else "New Session"
-                        self.chat = self.client.start_chat()
-                        self.chat_request_count = 0
-
-                    self.chat_request_count += 1
-                    active_chat = self.chat
-
-                    response = await asyncio.wait_for(
-                        active_chat.send_message(prompt),
-                        timeout=self.generation_timeout
-                    )
-                    return response.text
-
-                except asyncio.TimeoutError:
-                    print(f"[WARN #{q_id}] Timeout")
-                    attempts += 1
-
-                except Exception as e:
-                    error_str = str(e).lower()
-                    print(f"[ERROR #{q_id}] {e}")
-
-                    if "429" in error_str or "too many requests" in error_str:
-                        print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
-                        self._log_rate_limit(q_id)
-
-                        if self._rotate_account():
-                            print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
-                            async with self.async_lock:
-                                self.client = None
-                                self.chat = None
-                            attempts += 1
-                            continue
-                        else:
-                            print(f"[SYSTEM] ⛔ HARD 429 RECEIVED. PAUSING UNTIL NEXT HOUR.")
-                            HOURLY_429_LOCKOUT = True
-                            self.is_rate_limited = True
-                            return "Error: Rate limit reached. Global lockout until next hour."
-
-                    elif "auth" in error_str or "login" in error_str or "session" in error_str:
-                        async with self.async_lock:
-                            self.client = None
-                            self.chat = None
+                        if self.chat is None or self.chat_request_count >= self.MAX_CHAT_TURNS:
+                            self.chat = self.client.start_chat()
                             self.chat_request_count = 0
 
-                    elif "500" in error_str:
-                         await asyncio.sleep(10)
+                        self.chat_request_count += 1
+                        active_chat = self.chat
 
-                    attempts += 1
-                    await asyncio.sleep(5)
+                        response = await asyncio.wait_for(
+                            active_chat.send_message(prompt),
+                            timeout=self.generation_timeout
+                        )
+                        return response.text
 
-            return "Error: Failed to generate response after retries."
+                    except asyncio.TimeoutError:
+                        print(f"[WARN #{q_id}] Timeout")
+                        attempts += 1
+
+                    except Exception as e:
+                        error_str = str(e).lower()
+                        print(f"[ERROR #{q_id}] {e}")
+
+                        # [CASE 1] Rate Limit (429)
+                        if "429" in error_str or "too many requests" in error_str:
+                            print(f"[ALERT #{q_id}] 🛑 429 Rate Limit!")
+                            self._log_rate_limit(q_id)
+                            if self._rotate_account():
+                                print(f"[SYSTEM #{q_id}] ♻️ Switched Account. Retrying...")
+                                async with self.async_lock:
+                                    self.client = None
+                                    self.chat = None
+                                attempts += 1
+                                continue
+                            else:
+                                HOURLY_429_LOCKOUT = True
+                                self.is_rate_limited = True
+                                return "Error: Rate limit reached. Global lockout."
+
+                        # [CASE 2] Session Rot (406, Auth, Login)
+                        # ADDED "406" and "invalid response" here
+                        elif any(x in error_str for x in ["406", "invalid response", "auth", "login", "session"]):
+                            print(f"[SYSTEM #{q_id}] ⚠️ Session Desync/406 Detected. Re-initializing...")
+                            async with self.async_lock:
+                                # CRITICAL: Destroy client to force fresh handshake on next loop
+                                self.client = None
+                                self.chat = None
+                                self.chat_request_count = 0
+                            # Small pause to let server state settle
+                            await asyncio.sleep(2)
+
+                        # [CASE 3] Server Errors (500)
+                        elif "500" in error_str:
+                             await asyncio.sleep(5)
+
+                        attempts += 1
+                        await asyncio.sleep(3)
+
+                return "Error: Failed to generate response after retries."
 
     def query(self, prompt):
         with self.log_lock:
