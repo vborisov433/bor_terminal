@@ -195,11 +195,11 @@ class GeminiManager:
             # If prompt is short (<150 chars), simulate typing.
             # If long, simulate a "Paste" (faster).
             if len(prompt) < 150:
-                typing_speed = len(prompt) * random.uniform(0.1, 0.2)
+                typing_speed = len(prompt) * random.uniform(0.03, 0.08)
             else:
-                typing_speed = random.uniform(2, 5) # Simulate pasting + reviewing
+                typing_speed = random.uniform(1, 2.5)
 
-            thinking_time = random.uniform(2, 6)
+            thinking_time = random.uniform(1, 3)
 
             total_wait = typing_speed + thinking_time
 
