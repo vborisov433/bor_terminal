@@ -85,36 +85,74 @@ for each market in format:
 }
 TEXT;
             try {
+                // 1. Send Request
+                // Pass 'false' to toArray so 500 errors don't throw immediately, letting us handle the message
                 $response = $this->http->request('POST', 'http://localhost:5000/api/ask-gpt', [
                     'json' => ['question' => $question],
                 ]);
-                $data = $response->toArray();
+
+                $statusCode = $response->getStatusCode();
+                $data = $response->toArray(false);
+
+                // 2. Handle API Errors (HTTP 500 or JSON status 'error')
+                if ($statusCode !== 200 || ($data['status'] ?? 'success') === 'error') {
+                    throw new \RuntimeException($data['message'] ?? "API HTTP $statusCode");
+                }
+
                 $answer = $data['answer'] ?? '';
 
-                // Extract the JSON block only as before
+                // 3. Handle Logic Errors (API returned "Error: ...")
+                if (str_starts_with($answer, 'Error')) {
+                    throw new \RuntimeException("GPT returned error: $answer");
+                }
+
+                // 4. Extract JSON
                 $start = strpos($answer, '{');
                 $end = strrpos($answer, '}');
                 if ($start === false || $end === false || $end <= $start) {
-                    throw new \RuntimeException("Could not extract JSON from answer for link: " . json_encode($answer));
+                    // Throwing here sends us to the catch block to mark as failed
+                    throw new \RuntimeException("No JSON found in response");
                 }
+
                 $jsonString = substr($answer, $start, $end - $start + 1);
                 $json = json_decode($jsonString, true);
 
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    throw new \RuntimeException('Malformed JSON for link: ' . $newsItem->getLink());
+                    throw new \RuntimeException('Malformed JSON received');
                 }
 
+                // --- SUCCESS PATH ---
                 $newsItem->setGptAnalysis($json);
                 $newsItem->setAnalyzed(true);
 
+                // Generate the related entities
                 $this->completeNewsItem($newsItem, $io);
 
                 $this->em->persist($newsItem);
                 $this->em->flush();
 
                 $io->note('Analyzed: ' . $newsItem->getTitle());
+
             } catch (\Throwable $e) {
+                // --- FAILURE PATH ---
+                // We caught an error (API down, Invalid JSON, 503, etc.)
                 $io->error('Failed: ' . $newsItem->getTitle() . ' - ' . $e->getMessage());
+
+                // [CRITICAL STEP] Mark as analyzed so the QueryBuilder skips it next time
+                $newsItem->setAnalyzed(true);
+
+                // Store the error details in the JSON field for debugging later
+                $newsItem->setGptAnalysis([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                    'timestamp' => date('c')
+                ]);
+
+                // Optional: You might want to leave 'completed' as false to distinguish successful vs failed items
+                $newsItem->setCompleted(false);
+
+                $this->em->persist($newsItem);
+                $this->em->flush();
             }
 
             $io->progressAdvance();
