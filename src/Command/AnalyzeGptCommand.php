@@ -34,7 +34,7 @@ class AnalyzeGptCommand extends Command
 
         $repo = $this->em->getRepository(NewsItem::class);
 
-        $ago = new \DateTimeImmutable('-10 days');
+        $ago = new \DateTimeImmutable('-5 days');
         $newsItems = $repo->createQueryBuilder('n')
             ->where('n.analyzed = :analyzed')
             ->andWhere('n.date >= :startDate') // Using the 'date' field from your Entity
