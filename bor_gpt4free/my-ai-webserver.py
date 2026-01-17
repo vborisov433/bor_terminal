@@ -257,7 +257,8 @@ class GeminiManager:
             # ------------------------
 
             attempts = 0
-            max_attempts = 3
+            # [CHANGE] Set max attempts to 2
+            max_attempts = 2
 
             while attempts < max_attempts:
                 try:
@@ -310,21 +311,21 @@ class GeminiManager:
                         except: pass
                         return "Error: Skipped due to 406/Invalid Response."
 
-                    # [CASE 3] Auth/Login issues
+                    # [CASE 3] Auth/Login issues (Only these trigger Re-init)
                     elif any(x in error_str for x in ["auth", "login", "session"]):
                         async with self.async_lock:
                             self.client = None
                             self.chat = None
                             self.chat_request_count = 0
 
-                    # [CASE 5] Server Unavailable (503) -- UPDATED: LOCKOUT ADDED
-                    elif "503" in error_str:
-                        # 1. Print Debug details
-                        print(f"\n{'='*20} [DEBUG] 503 SERVICE UNAVAILABLE - LOCKING OUT {'='*20}")
-                        print(f"FAILED PROMPT (REQ #{q_id}):\n{prompt}")
-                        print(f"{'='*60}\n")
+                    # [CASE 4] Content Generation Failure (NO RE-INIT)
+                    elif "failed to generate contents" in error_str:
+                        print(f"\n{'='*20} [DEBUG] FAILED TO GENERATE CONTENTS - ABORTING {'='*20}")
+                        return "Error: Failed to generate contents."
 
-                        # 2. Log to General Debug File
+                    # [CASE 5] Server Unavailable (503) - Global Lockout
+                    elif "503" in error_str:
+                        print(f"\n{'='*20} [DEBUG] 503 SERVICE UNAVAILABLE - LOCKING OUT {'='*20}")
                         try:
                             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                             log_entry = (
@@ -338,12 +339,11 @@ class GeminiManager:
                         except Exception as log_err:
                             print(f"[LOG ERROR] Could not write to debug file: {log_err}")
 
-                        # 3. ACTIVATE GLOBAL LOCKOUT (Same as 429)
                         HOURLY_429_LOCKOUT = True
                         self.is_rate_limited = True
                         return "Error: 503 Service Unavailable. Global lockout."
 
-                    # [CASE 4] Server Errors (500) - Retryable
+                    # [CASE 6] Server Errors (500) - Retryable
                     elif "500" in error_str:
                             await asyncio.sleep(5)
 
