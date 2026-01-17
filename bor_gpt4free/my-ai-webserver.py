@@ -402,7 +402,7 @@ def api_stop_test():
 # [FLASK] API ROUTE
 # ==================================================================================
 QUOTA_LOCK = Lock()
-MAX_HOURLY_REQUESTS = 55
+MAX_HOURLY_REQUESTS = 91
 CURRENT_HOUR_TRACKER = -1
 SESSION_COUNTER = 0
 LAST_LOG_TIME = 0
