@@ -13,12 +13,11 @@ from flask import Flask, request, render_template_string, jsonify
 # ==================================================================================
 # [SETUP] LOGGING SILENCER
 # ==================================================================================
-# Mute verbose debug logs from libraries
-# logging.getLogger("gemini_webapi").setLevel(logging.ERROR)
-# logging.getLogger("gemini_webapi.client").setLevel(logging.ERROR)
-# logging.getLogger("gemini_webapi.utils").setLevel(logging.ERROR)
-# logging.getLogger("urllib3").setLevel(logging.ERROR)
-# logging.getLogger("werkzeug").setLevel(logging.ERROR)
+logging.getLogger("gemini_webapi").setLevel(logging.ERROR)
+logging.getLogger("gemini_webapi.client").setLevel(logging.ERROR)
+logging.getLogger("gemini_webapi.utils").setLevel(logging.ERROR)
+logging.getLogger("urllib3").setLevel(logging.ERROR)
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 # ==================================================================================
 # [SETUP] PATH CONFIGURATION
@@ -63,22 +62,14 @@ def convert_netscape_to_json():
     try:
         with open(INPUT_FILENAME, 'r', encoding='utf-8') as f:
             for line in f:
-                # 1. Skip comments and empty lines
                 if line.startswith('#') or not line.strip():
                     continue
-
-                # 2. Split Netscape format (tab separated)
                 parts = line.strip().split('\t')
-
-                # 3. Ensure valid line length (at least 7 columns)
                 if len(parts) >= 7:
-                    # Name is usually 6th column (index 5)
-                    # Value is usually 7th column (index 6)
                     name = parts[5]
                     value = parts[6]
                     cookies[name] = value
 
-        # 4. Save to JSON
         with open(OUTPUT_FILENAME, 'w') as f:
             json.dump(cookies, f, indent=2)
 
@@ -146,6 +137,9 @@ class GeminiManager:
         self.is_rate_limited = False
         self.rate_limit_resume_time = 0
 
+        # [NEW] Track consecutive content failures
+        self.content_failure_count = 0
+
         self.thread = Thread(target=self._run_event_loop, daemon=True)
         self.thread.start()
 
@@ -199,8 +193,6 @@ class GeminiManager:
                     # Normalize to dict
                     cookies = {c['name']: c['value'] for c in raw if 'name' in c} if isinstance(raw, list) else raw
 
-                    # 1. Initialize with the PRIMARY authentication tokens
-                    # Note: Most libraries only accept these 3 as direct arguments.
                     self.client = GeminiClient(
                         secure_1psid=cookies.get("__Secure-1PSID"),
                         secure_1psidts=cookies.get("__Secure-1PSIDTS")
@@ -214,13 +206,8 @@ class GeminiManager:
                     if hasattr(self.client, "session"):
                         self.client.session.headers["User-Agent"] = random.choice(user_agents)
                         self.client.session.headers["Referer"] = "https://gemini.google.com/"
-
-                        # 2. CRITICAL: Inject the '3PSID' and other missing cookies manually
-                        # This ensures __Secure-3PSID, __Secure-3PSIDTS, and __Secure-3PSIDCC are sent.
-                        # The library will not ask for them, but Google requires them for Paid accounts.
                         self.client.session.cookies.update(cookies)
 
-                    # 3. Redundancy: Update the wrapper's internal storage
                     for k, v in cookies.items():
                         self.client.cookies[k] = v
 
@@ -238,7 +225,7 @@ class GeminiManager:
             global HOURLY_429_LOCKOUT
 
             if HOURLY_429_LOCKOUT:
-                    return "Error: 429/503 Lockout Active. Waiting for next hour."
+                    return "Error: System Locked (429/503/RepeatedFailure). Waiting for next hour."
 
             if self.is_rate_limited:
                 remaining = self.rate_limit_resume_time - time.time()
@@ -257,7 +244,6 @@ class GeminiManager:
             # ------------------------
 
             attempts = 0
-            # [CHANGE] Set max attempts to 2
             max_attempts = 2
 
             while attempts < max_attempts:
@@ -275,6 +261,9 @@ class GeminiManager:
                         active_chat.send_message(prompt),
                         timeout=self.generation_timeout
                     )
+
+                    # [SUCCESS] Reset the failure count since we got a valid response
+                    self.content_failure_count = 0
                     return response.text
 
                 except asyncio.TimeoutError:
@@ -318,9 +307,33 @@ class GeminiManager:
                             self.chat = None
                             self.chat_request_count = 0
 
-                    # [CASE 4] Content Generation Failure (NO RE-INIT)
+                    # [CASE 4] Content Generation Failure (COUNT, LOG, & LOCKOUT)
                     elif "failed to generate contents" in error_str:
-                        print(f"\n{'='*20} [DEBUG] FAILED TO GENERATE CONTENTS - ABORTING {'='*20}")
+                        self.content_failure_count += 1
+
+                        # 1. Print and Log
+                        print(f"\n{'='*20} [DEBUG] FAILED TO GENERATE CONTENTS ({self.content_failure_count}/3) {'='*20}")
+                        print(f"FAILED PROMPT:\n{prompt}")
+                        try:
+                            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+                            log_entry = (
+                                f"[{timestamp}] Req #{q_id} FAILED TO GENERATE CONTENTS\n"
+                                f"Count: {self.content_failure_count}/3\n"
+                                f"Prompt: {prompt}\n"
+                                f"{'-'*40}\n"
+                            )
+                            with open(self.debug_log, "a", encoding="utf-8") as f:
+                                f.write(log_entry)
+                        except Exception as log_err:
+                            print(f"[LOG ERROR] Could not write to debug file: {log_err}")
+
+                        # 2. Check Threshold
+                        if self.content_failure_count >= 3:
+                            print(f"\n[CRITICAL] 🛑 3 Consecutive Content Failures. Stopping requests for 1 hour.")
+                            HOURLY_429_LOCKOUT = True
+                            self.is_rate_limited = True
+                            return "Error: System Locked due to repeated content generation failures."
+
                         return "Error: Failed to generate contents."
 
                     # [CASE 5] Server Unavailable (503) - Global Lockout
@@ -390,14 +403,14 @@ def run_stress_test_loop():
 
     while STRESS_TEST_RUNNING:
         if HOURLY_429_LOCKOUT:
-            print("[TEST] 🛑 System reported Global 429 Lockout! Test stopping.")
+            print("[TEST] 🛑 System reported Global Lockout! Test stopping.")
             break
 
         prompt = random.choice(TEST_PROMPTS)
         result = bot_manager.query(prompt)
 
         if "Rate limit reached" in result or "Lockout" in result:
-            print("[TEST] 🛑 Received Rate Limit Error. Stopping.")
+            print("[TEST] 🛑 Received Lockout Error. Stopping.")
             break
 
         if result.startswith("Error"):
@@ -454,12 +467,14 @@ def api_ask():
             CURRENT_HOUR_TRACKER = this_hour
             SESSION_COUNTER = 0
             HOURLY_429_LOCKOUT = False
+            # [RESET] Also reset content failure count on new hour for safety
+            bot_manager.content_failure_count = 0
 
         if HOURLY_429_LOCKOUT:
             next_hour = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
             minutes_left = int((next_hour - now).total_seconds() / 60) + 1
             if time.time() - LAST_LOG_TIME > 10:
-                print(f"[API] ⛔ SYSTEM LOCKED (429 Hit). Paused until next hour (~{minutes_left} min left).")
+                print(f"[API] ⛔ SYSTEM LOCKED. Paused until next hour (~{minutes_left} min left).")
                 LAST_LOG_TIME = time.time()
             return jsonify({}), 200
 
