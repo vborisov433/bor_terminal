@@ -14,11 +14,11 @@ from flask import Flask, request, render_template_string, jsonify
 # [SETUP] LOGGING SILENCER
 # ==================================================================================
 # Mute verbose debug logs from libraries
-logging.getLogger("gemini_webapi").setLevel(logging.ERROR)
-logging.getLogger("gemini_webapi.client").setLevel(logging.ERROR)
-logging.getLogger("gemini_webapi.utils").setLevel(logging.ERROR)
-logging.getLogger("urllib3").setLevel(logging.ERROR)
-logging.getLogger("werkzeug").setLevel(logging.ERROR)
+# logging.getLogger("gemini_webapi").setLevel(logging.ERROR)
+# logging.getLogger("gemini_webapi.client").setLevel(logging.ERROR)
+# logging.getLogger("gemini_webapi.utils").setLevel(logging.ERROR)
+# logging.getLogger("urllib3").setLevel(logging.ERROR)
+# logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 # ==================================================================================
 # [SETUP] PATH CONFIGURATION
