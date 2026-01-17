@@ -238,7 +238,7 @@ class GeminiManager:
             global HOURLY_429_LOCKOUT
 
             if HOURLY_429_LOCKOUT:
-                    return "Error: 429 Lockout Active. Waiting for next hour."
+                    return "Error: 429/503 Lockout Active. Waiting for next hour."
 
             if self.is_rate_limited:
                 remaining = self.rate_limit_resume_time - time.time()
@@ -317,10 +317,10 @@ class GeminiManager:
                             self.chat = None
                             self.chat_request_count = 0
 
-                    # [CASE 5] Server Unavailable (503) -- NEW ADDITION
+                    # [CASE 5] Server Unavailable (503) -- UPDATED: LOCKOUT ADDED
                     elif "503" in error_str:
-                        # 1. Print Debug details to Console
-                        print(f"\n{'='*20} [DEBUG] 503 SERVICE UNAVAILABLE - SKIPPING {'='*20}")
+                        # 1. Print Debug details
+                        print(f"\n{'='*20} [DEBUG] 503 SERVICE UNAVAILABLE - LOCKING OUT {'='*20}")
                         print(f"FAILED PROMPT (REQ #{q_id}):\n{prompt}")
                         print(f"{'='*60}\n")
 
@@ -328,7 +328,7 @@ class GeminiManager:
                         try:
                             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                             log_entry = (
-                                f"[{timestamp}] Request #{q_id} FAILED (503)\n"
+                                f"[{timestamp}] Request #{q_id} FAILED (503) -> GLOBAL LOCKOUT TRIGGERED\n"
                                 f"Error: {str(e)}\n"
                                 f"Prompt: {prompt}\n"
                                 f"{'-'*40}\n"
@@ -338,8 +338,10 @@ class GeminiManager:
                         except Exception as log_err:
                             print(f"[LOG ERROR] Could not write to debug file: {log_err}")
 
-                        # 3. Skip immediately (Return Error, do not retry)
-                        return "Error: Skipped due to 503 Service Unavailable."
+                        # 3. ACTIVATE GLOBAL LOCKOUT (Same as 429)
+                        HOURLY_429_LOCKOUT = True
+                        self.is_rate_limited = True
+                        return "Error: 503 Service Unavailable. Global lockout."
 
                     # [CASE 4] Server Errors (500) - Retryable
                     elif "500" in error_str:
