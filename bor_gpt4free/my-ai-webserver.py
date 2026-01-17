@@ -255,7 +255,7 @@ class GeminiManager:
                 # ------------------------
 
                 attempts = 0
-                max_attempts = 3  # Increased to 3 to allow for a 406 recovery
+                max_attempts = 3
 
                 while attempts < max_attempts:
                     try:
@@ -298,16 +298,19 @@ class GeminiManager:
                                 self.is_rate_limited = True
                                 return "Error: Rate limit reached. Global lockout."
 
-                        # [CASE 2] Session Rot (406, Auth, Login)
-                        # ADDED "406" and "invalid response" here
+                        # [CASE 2] Session Rot (406, Invalid Response, Auth)
                         elif any(x in error_str for x in ["406", "invalid response", "auth", "login", "session"]):
                             print(f"[SYSTEM #{q_id}] ⚠️ Session Desync/406 Detected. Re-initializing...")
+
+                            # [DEBUG] PRINT THE PROMPT HERE
+                            print(f"\n{'='*20} DEBUG: FAILED PROMPT {'='*20}")
+                            print(f"{prompt}")
+                            print(f"{'='*60}\n")
+
                             async with self.async_lock:
-                                # CRITICAL: Destroy client to force fresh handshake on next loop
                                 self.client = None
                                 self.chat = None
                                 self.chat_request_count = 0
-                            # Small pause to let server state settle
                             await asyncio.sleep(2)
 
                         # [CASE 3] Server Errors (500)
