@@ -348,63 +348,21 @@ final class NewsController extends AbstractController
 
     #[Route('/api/market-summary', name: 'api_market_summary_json', methods: ['GET'])]
     public function marketSummaryJson(
-        NewsItemRepository       $repo,
-        HttpClientInterface      $http,
-        EntityManagerInterface   $em,
-        PromptTemplateRepository $promptRepo,
-        Request                  $request
-    ): JsonResponse
-    {
-        $debug = $request->query->get('debug');
-
+        NewsItemRepository $repo,
+        HttpClientInterface $http,
+        EntityManagerInterface $em,
+        PromptTemplateRepository $promptRepo
+    ): JsonResponse {
         $start = microtime(true);
 
-        $promptTemplate = $promptRepo->findOneBy([], ['id' => 'DESC']);
+        // 1. Prepare Data & Template
+        $newsData = json_encode($this->get_all_news($repo), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-//        $_question = json_encode($this->get_all_news($repo)) .' '. $promptTemplate->getTemplate();
+        $templateEntity = $promptRepo->findOneBy([], ['id' => 'DESC']);
+        // Flatten template to single line to avoid formatting issues
+        $templateParams = $templateEntity ? trim(preg_replace('/\s+/', ' ', $templateEntity->getTemplate())) : '';
 
-        $_question_raw = json_encode($this->get_all_news($repo));
-        $_question_clean = json_decode($_question_raw, true); // decode to array
-        $_question_string = json_encode($_question_clean, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-        $template = str_replace(["\r", "\n"], ' ', $promptTemplate->getTemplate());
-//        $_question =
-//            "*** SYSTEM INSTRUCTION: YOU ARE A TEXT-ONLY TERMINAL. ".
-//            "DO NOT GENERATE IMAGES, CHARTS, OR GRAPHS. ".
-//            "OUTPUT RAW TEXT/JSON ONLY. NO IMAGE TOOLS. *** " .
-//            $_question_string . ' ' . $template;
-
-//        dd($_question);
-
-//        if ($debug) {
-//            return new JsonResponse([
-//                'question_length' => strlen($_question),
-//                'question' => $_question,
-//            ]);
-//        }
-
-//            '
-//            read all news here, analyze them,
-//            markets: dow audjpy audusd dxy fed interest rate
-//            1. use card list overall short summary with bullets,
-//            2. table format with list for each market with columns: "market&sentiment icon direction" "magnitude rate 0-10"  "reason",
-//            3. use card for each market from above what can be bullish or bearish in future
-//            4. create card with what news or events to watch in the markets,
-//            5. div label for total characters for this response,
-//            return html string only in one line no whitespace use "bootstrap 5" icons,colors "container-fluid p-1" "card mb-2"
-//                ';
-//        with columns: market&sentiment, magnitude 0-10, reason and td colspan=3 for future Positive,Negative Events
-//        in card list overal short summary
-//            in card What To Watch in the markets
-        //response Total characters < 5000,
-
-//        $_question = preg_replace('/\s+/', ' ', trim($_question));
-
-//        dd(strlen($_question));
-//        dd($_question);
-//
-//
-
+        // 2. Build the "Sandwich" Prompt
         $question = <<<TEXT
 *** SYSTEM INSTRUCTION: CRITICAL OVERRIDE ***
 1. YOU ARE A CODE-ONLY TERMINAL.
@@ -413,11 +371,10 @@ final class NewsController extends AbstractController
 4. OUTPUT RAW STRING ONLY.
 
 *** INPUT DATA ***
-{$_question_string}
+{$newsData}
 
 *** TASK INSTRUCTIONS ***
 Analyze the data above for markets: DOW, AUDJPY, AUDUSD, DXY, FED INTEREST RATE.
-
 1. Calculate % of bullish vs bearish stories per market.
 2. Compare current sentiment to historical patterns.
 3. Probability bullets for up/down moves.
@@ -430,71 +387,53 @@ Return a single HTML string using Bootstrap 5 classes (container-fluid p-1, card
 - DO NOT generate an image file.
 - DO NOT generate a chart.
 - Structure:
-{$template}
+{$templateParams}
 
 *** FINAL VERIFICATION ***
 Check your output. Does it contain an image URL? If yes, delete it.
 Ensure the output starts immediately with "```html" and contains ONLY valid HTML code.
 TEXT;
 
-//        dd($question);
-
-
-        $question = [
-            'question' => $question
-        ];
-
-
-            $maxRetries = 2;
-        $retryDelaySeconds = 7;
+        // 3. Send Request with Retry Logic
+        $maxRetries = 2;
         $html = null;
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
                 $response = $http->request('POST', 'http://localhost:5000/api/ask-gpt', [
-                    'json' => $question
+                    'json' => ['question' => $question]
                 ]);
 
-                if ($response->getStatusCode() >= 300) {
-                    throw new \Exception('API returned a non-successful status code: ' . $response->getStatusCode()); //debug the message
+                if ($response->getStatusCode() !== 200) {
+                    throw new \RuntimeException('API Status: ' . $response->getStatusCode());
                 }
-
-//                $apiResponse = $response->toArray();
-//                $html = $apiResponse['answer'] ?? null;
-//                $html = str_replace('```html', '', $html);
-//                $html = str_replace('```', '', $html);
 
                 $apiResponse = $response->toArray();
 
-//              dump($apiResponse);
+                // Clean Markdown tags from response
+                $html = str_replace(['```html', '```'], '', $apiResponse['answer'] ?? '');
 
-                $html = $apiResponse['answer'] ?? null;
-                $html = str_replace(['```html', '```'], '', $html);
-
-//                dump($html);
-
-
-                $summary = new MarketSummary();
-                $summary->setHtmlResult($html);
-                $summary->setCreatedAt(new \DateTimeImmutable());
-                $timeLoaded = (int)round(microtime(true) - $start);
-                $summary->setTimeLoaded($timeLoaded);
-                $em->persist($summary);
-                $em->flush();
-
+                // Success: Break loop
                 break;
+
             } catch (\Throwable $e) {
                 if ($attempt === $maxRetries) {
-                    return new JsonResponse([
-                        'html_result' => 'Error after max retries: ' . $e->getMessage(),
-                    ], 500);
+                    return new JsonResponse(['error' => $e->getMessage()], 500);
                 }
-                sleep($retryDelaySeconds);
+                sleep(7); // Wait before retry
             }
         }
 
-        return new JsonResponse([
-            'html_result' => $html ?? 'No summary could be generated after ' . $maxRetries . ' attempts.'
-        ]);
+        // 4. Persist & Return
+        if ($html) {
+            $summary = new MarketSummary();
+            $summary->setHtmlResult($html);
+            $summary->setCreatedAt(new \DateTimeImmutable());
+            $summary->setTimeLoaded((int)round(microtime(true) - $start));
+            $em->persist($summary);
+            $em->flush();
+        }
+
+        return new JsonResponse(['html_result' => $html]);
     }
 }
