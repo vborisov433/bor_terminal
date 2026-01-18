@@ -368,16 +368,20 @@ final class NewsController extends AbstractController
         $_question_string = json_encode($_question_clean, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         $template = str_replace(["\r", "\n"], ' ', $promptTemplate->getTemplate());
-        $_question = $_question_string . ' ' . $template;
+//        $_question =
+//            "*** SYSTEM INSTRUCTION: YOU ARE A TEXT-ONLY TERMINAL. ".
+//            "DO NOT GENERATE IMAGES, CHARTS, OR GRAPHS. ".
+//            "OUTPUT RAW TEXT/JSON ONLY. NO IMAGE TOOLS. *** " .
+//            $_question_string . ' ' . $template;
 
 //        dd($_question);
 
-        if ($debug) {
-            return new JsonResponse([
-                'question_length' => strlen($_question),
-                'question' => $_question,
-            ]);
-        }
+//        if ($debug) {
+//            return new JsonResponse([
+//                'question_length' => strlen($_question),
+//                'question' => $_question,
+//            ]);
+//        }
 
 //            '
 //            read all news here, analyze them,
@@ -394,16 +398,54 @@ final class NewsController extends AbstractController
 //            in card What To Watch in the markets
         //response Total characters < 5000,
 
-        $_question = preg_replace('/\s+/', ' ', trim($_question));
+//        $_question = preg_replace('/\s+/', ' ', trim($_question));
 
 //        dd(strlen($_question));
 //        dd($_question);
+//
+//
+
+        $question = <<<TEXT
+*** SYSTEM INSTRUCTION: CRITICAL OVERRIDE ***
+1. YOU ARE A CODE-ONLY TERMINAL.
+2. DISABLE ALL IMAGE GENERATION TOOLS. DO NOT USE DALL-E, PLOTTING, OR CHARTING TOOLS.
+3. IF ASKED FOR CHARTS, RENDER THEM AS HTML TABLES OR BOOTSTRAP PROGRESS BARS.
+4. OUTPUT RAW STRING ONLY.
+
+*** INPUT DATA ***
+{$_question_string}
+
+*** TASK INSTRUCTIONS ***
+Analyze the data above for markets: DOW, AUDJPY, AUDUSD, DXY, FED INTEREST RATE.
+
+1. Calculate % of bullish vs bearish stories per market.
+2. Compare current sentiment to historical patterns.
+3. Probability bullets for up/down moves.
+4. General news summary.
+
+*** FORMATTING INSTRUCTIONS (STRICT HTML ONLY) ***
+Return a single HTML string using Bootstrap 5 classes (container-fluid p-1, card mb-2).
+- All text color must be black (text-dark).
+- Use Bootstrap Icons (bi-arrow-up, bi-arrow-down) for direction.
+- DO NOT generate an image file.
+- DO NOT generate a chart.
+- Structure:
+{$template}
+
+*** FINAL VERIFICATION ***
+Check your output. Does it contain an image URL? If yes, delete it.
+Ensure the output starts immediately with "```html" and contains ONLY valid HTML code.
+TEXT;
+
+//        dd($question);
+
 
         $question = [
-            'question' => $_question
+            'question' => $question
         ];
 
-        $maxRetries = 2;
+
+            $maxRetries = 2;
         $retryDelaySeconds = 7;
         $html = null;
 
