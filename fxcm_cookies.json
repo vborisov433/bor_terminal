@@ -1,0 +1,50 @@
+[
+    {
+        "domain": "app.fxcm.com",
+        "path": "\/",
+        "secure": true,
+        "expiry": 0,
+        "name": "BIGipServerot5MxO+J3W1ofPE8kuwnzg",
+        "value": "!6FvgUeVvvIjnrdCdeSKc+rOl63aid\/v\/5A2wCQ+Iks9bdymihViLpexbcq3clGVcwy7SxsdJ\/Mwcrg=="
+    },
+    {
+        "domain": ".fxcm.com",
+        "path": "\/",
+        "secure": true,
+        "expiry": 0,
+        "name": "_cfuvid",
+        "value": "pQsg.03DyiDd0A1qWIxxZj0ppJExSTnaFY4Hjz8iYOs-1768817876494-0.0.1.1-604800000"
+    },
+    {
+        "domain": ".fxcm.com",
+        "path": "\/",
+        "secure": true,
+        "expiry": 1768820750,
+        "name": "__cf_bm",
+        "value": "F32BTwwhrCTmy656lbQewnhATGVxe2joxCswwopYuEs-1768818949-1.0.1.1-tqzOoqB9VsMY1F6Pz3NpIe6v9jmkJbs3yK.XY9rCBWBcIG8FbKkanbBZPbLt6M3YUUmsyxwxWWWuna4raYYC_b_HO6cc09HxevaU0b1bXh8"
+    },
+    {
+        "domain": ".fxcm.com",
+        "path": "\/",
+        "secure": true,
+        "expiry": 1774002951,
+        "name": "refresh-token",
+        "value": "eyJraWQiOiJyZWZyZXNoXzAiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ2ZXNvbmV0IiwiVHJhZGluZ1Nlc3Npb25TdWJJRCI6IkNIRlJFQUwwMSIsIlRyYWRpbmdTZXNzaW9uSUQiOiJGWENNIiwiVXNlcklEIjoiMTQ2MDkxIiwiaXNzIjoiaHR0cHM6Ly9meGNtLmNvbSIsIlVzZXJLaW5kIjoiMjAiLCJleHAiOjE3Njk0MjM3NTAsImlhdCI6MTc2ODgxODk1MCwianRpIjoiNmM3YjVlOWUtNzVjZS00MjMxLWI5MjUtN2VhNGY4MzA4OWJmIiwiU0lEIjoic3VPM0VrOGxKcG5YM2tNbkttdUh0WEh1RlJKbFZJL2NkRlhNb2d0U055RWRVZ1dka2k5cThHc1ZpekYrVFU4dEMvS0NPdG4xemxpZUppYjFkMGU0NlpKbjNUSEtIOWEvcWR0Q1JPaVFnZ1E9In0.Z8OJnub4WQqOVH5Ya1GGIjUmM16X3X1Ad2Xy0HUb6omESQUHcFsG7TYEP3OxpbX5KCFmgXw2fglC95cQ9ikwzajiTLjrl8R5Qjz3Alnh174NCpO84KAor3ydZC_RNhLvW2LqYAfCQN_I1keUC8IpJO2K2OvCgqTsWiu9XRN0wkNES_4Fptcg7GZHJkIVEnz3eWZXsrz0zWRCJwrwlF7eY_O8xjflKY-5U1rWFNadYX21blzDUcbsppZ4gUBzXDFYKbReZcmH_lZafXd4xRRc5cHoo5CQ2Dmi9GL1HK205gtHHKBIV4b8dQE1gwDwYkthLGH45aLBxjraOUgUO0O-qw"
+    },
+    {
+        "domain": ".fxcm.com",
+        "path": "\/",
+        "secure": true,
+        "expiry": 1774002951,
+        "name": "XSRF-TOKEN",
+        "value": "e4b322db-4466-456c-828e-4ced21ee0878"
+    },
+    {
+        "domain": ".fxcm.com",
+        "path": "\/",
+        "secure": true,
+        "expiry": 1800352677,
+        "name": "cf_clearance",
+        "value": "e7j1PWU17LFbhxy05wHVNjptErOfIaEAIskYssQDl3k-1768816676-1.2.1.1-iC6hIm_gmdY9wBZiWmoLbJnZrTnHtgH4Vd8UXHhTHJFDy7UTOw7Pfyf6C6vk..scCSMtPsMi_0YkRdcy1dlzD2mbrbSp1eFSMekq4MaYUxH3FA4vnEZGei9x0foRcCCn1OeEJ1ko5Snbj7aSUg5_SNqjElsMT2MzoO73_3HdOR0WOX_ILIxjZBXd1LZDO5eN2Fpm5_Ms530p1qzHXxeBNp6C_VMyKu0p0IXMJd356bA"
+    }
+]
